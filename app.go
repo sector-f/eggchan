@@ -34,6 +34,7 @@ func (a *App) Run(addr string) {
 
 func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/categories", a.getCategories).Methods("GET")
+	a.Router.HandleFunc("/boards", a.getBoards).Methods("GET")
 }
 
 func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +45,16 @@ func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, categories)
+}
+
+func (a *App) getBoards(w http.ResponseWriter, r *http.Request) {
+	boards, err := getBoards(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, boards)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

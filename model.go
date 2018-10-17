@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"gopkg.in/guregu/null.v3"
 )
 
 type category struct {
@@ -33,4 +34,32 @@ func getCategories(db *sql.DB) ([]category, error) {
 	}
 
 	return categories, nil
+}
+
+type board struct {
+	// ID          int    `json:"-"`
+	Name        string      `json:"name"`
+	Description null.String `json:"description"`
+	Category    null.String `json:"category"`
+}
+
+func getBoards(db *sql.DB) ([]board, error) {
+	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards JOIN categories ON boards.category = categories.id")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	boards := []board{}
+	for rows.Next() {
+		var b board
+		if err := rows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
+			return nil, err
+		}
+		boards = append(boards, b)
+	}
+
+	return boards, nil
 }
