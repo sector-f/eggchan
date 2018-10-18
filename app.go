@@ -34,6 +34,8 @@ func (a *App) Run(addr string) {
 
 func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/categories", a.getCategories).Methods("GET")
+	a.Router.HandleFunc("/categories/{category}/", a.showCategory).Methods("GET")
+	a.Router.HandleFunc("/categories/{category}", a.showCategory).Methods("GET")
 	a.Router.HandleFunc("/boards", a.getBoards).Methods("GET")
 }
 
@@ -45,6 +47,19 @@ func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, categories)
+}
+
+func (a *App) showCategory(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	name := vars["category"]
+
+	boards, err := showCategory(a.DB, name)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid category")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, boards)
 }
 
 func (a *App) getBoards(w http.ResponseWriter, r *http.Request) {

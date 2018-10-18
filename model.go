@@ -37,14 +37,14 @@ func getCategories(db *sql.DB) ([]category, error) {
 }
 
 type board struct {
-	// ID          int    `json:"-"`
+	ID          int         `json:"-"`
 	Name        string      `json:"name"`
 	Description null.String `json:"description"`
 	Category    null.String `json:"category"`
 }
 
 func getBoards(db *sql.DB) ([]board, error) {
-	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id")
+	rows, err := db.Query("SELECT boards.id, boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id")
 
 	if err != nil {
 		return nil, err
@@ -55,7 +55,27 @@ func getBoards(db *sql.DB) ([]board, error) {
 	boards := []board{}
 	for rows.Next() {
 		var b board
-		if err := rows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
+		if err := rows.Scan(&b.ID, &b.Name, &b.Description, &b.Category); err != nil {
+			return nil, err
+		}
+		boards = append(boards, b)
+	}
+
+	return boards, nil
+}
+
+func showCategory(db *sql.DB, name string) ([]board, error) {
+	rows, err := db.Query("SELECT boards.id, boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1", name)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	boards := []board{}
+	for rows.Next() {
+		var b board
+		if err := rows.Scan(&b.ID, &b.Name, &b.Description, &b.Category); err != nil {
 			return nil, err
 		}
 		boards = append(boards, b)
