@@ -27,5 +27,5 @@ func main() {
 		os.Getenv("EGGCHAN_DB_PASSWORD"),
 		os.Getenv("EGGCHAN_DB_NAME"),
 	)
-	app.Run("127.0.0.1:8005")
+	app.Run(os.Args[1])
 }
