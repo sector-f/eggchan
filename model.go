@@ -44,7 +44,7 @@ type board struct {
 }
 
 func getBoards(db *sql.DB) ([]board, error) {
-	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards JOIN categories ON boards.category = categories.id")
+	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id")
 
 	if err != nil {
 		return nil, err
