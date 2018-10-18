@@ -33,10 +33,14 @@ func (a *App) Run(addr string) {
 }
 
 func (a *App) initializeRoutes() {
+	a.Router.HandleFunc("/categories/", a.getCategories).Methods("GET")
 	a.Router.HandleFunc("/categories", a.getCategories).Methods("GET")
 	a.Router.HandleFunc("/categories/{category}/", a.showCategory).Methods("GET")
 	a.Router.HandleFunc("/categories/{category}", a.showCategory).Methods("GET")
+	a.Router.HandleFunc("/boards/", a.getBoards).Methods("GET")
 	a.Router.HandleFunc("/boards", a.getBoards).Methods("GET")
+	a.Router.HandleFunc("/boards/{board}/", a.showBoard).Methods("GET")
+	a.Router.HandleFunc("/boards/{board}", a.showBoard).Methods("GET")
 }
 
 func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +64,19 @@ func (a *App) showCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, boards)
+}
+
+func (a *App) showBoard(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	name := vars["board"]
+
+	posts, err := showBoard(a.DB, name)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid board")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, posts)
 }
 
 func (a *App) getBoards(w http.ResponseWriter, r *http.Request) {

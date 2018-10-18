@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"gopkg.in/guregu/null.v3"
+	"time"
 )
 
 type category struct {
@@ -82,4 +83,30 @@ func showCategory(db *sql.DB, name string) ([]board, error) {
 	}
 
 	return boards, nil
+}
+
+type post struct {
+	PostNum int       `json:"post_num"`
+	ReplyTo null.Int  `json:"reply_to"`
+	Time    time.Time `json:"time"`
+	Comment string    `json:"comment"`
+}
+
+func showBoard(db *sql.DB, name string) ([]post, error) {
+	rows, err := db.Query("SELECT posts.post_num, posts.reply_to, posts.time, posts.comment FROM posts LEFT JOIN boards ON boards.id = posts.board_id WHERE boards.name = $1 AND posts.reply_to IS NULL", name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	posts := []post{}
+	for rows.Next() {
+		var p post
+		if err := rows.Scan(&p.PostNum, &p.ReplyTo, &p.Time, &p.Comment); err != nil {
+			return nil, err
+		}
+		posts = append(posts, p)
+	}
+
+	return posts, nil
 }
