@@ -8,6 +8,7 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type App struct {
@@ -41,6 +42,8 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/boards", a.getBoards).Methods("GET")
 	a.Router.HandleFunc("/boards/{board}/", a.showBoard).Methods("GET")
 	a.Router.HandleFunc("/boards/{board}", a.showBoard).Methods("GET")
+	a.Router.HandleFunc("/boards/{board}/{thread}/", a.showThread).Methods("GET")
+	a.Router.HandleFunc("/boards/{board}/{thread}", a.showThread).Methods("GET")
 }
 
 func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +74,25 @@ func (a *App) showBoard(w http.ResponseWriter, r *http.Request) {
 	name := vars["board"]
 
 	posts, err := showBoard(a.DB, name)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid board")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, posts)
+}
+
+func (a *App) showThread(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	board := vars["board"]
+
+	thread, err := strconv.Atoi(vars["thread"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid thread ID")
+		return
+	}
+
+	posts, err := showThread(a.DB, board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid board")
 		return

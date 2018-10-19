@@ -110,3 +110,27 @@ func showBoard(db *sql.DB, name string) ([]post, error) {
 
 	return posts, nil
 }
+
+func showThread(db *sql.DB, board string, thread int) ([]post, error) {
+	rows, err := db.Query(
+		"SELECT posts.post_num, posts.reply_to, posts.time, posts.comment FROM posts INNER JOIN boards ON (SELECT id FROM boards WHERE name = $1 LIMIT 1) = posts.board_id WHERE posts.post_num = $2 OR posts.reply_to = $2 ORDER BY posts.time ASC",
+		board,
+		thread,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	posts := []post{}
+	for rows.Next() {
+		var p post
+		if err := rows.Scan(&p.PostNum, &p.ReplyTo, &p.Time, &p.Comment); err != nil {
+			return nil, err
+		}
+		posts = append(posts, p)
+	}
+
+	return posts, nil
+}
