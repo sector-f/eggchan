@@ -135,7 +135,11 @@ func showBoard(db *sql.DB, name string) ([]thread, error) {
 
 func showThread(db *sql.DB, board string, thread int) ([]post, error) {
 	rows, err := db.Query(
-		"SELECT DISTINCT posts.post_num, posts.reply_to, posts.time, posts.comment FROM posts INNER JOIN boards ON (SELECT id FROM boards WHERE name = $1 LIMIT 1) = posts.board_id WHERE posts.post_num = $2 OR posts.reply_to = $2 ORDER BY posts.time ASC",
+		`SELECT DISTINCT posts.post_num, posts.reply_to, posts.time, posts.comment
+		FROM posts
+		INNER JOIN boards ON (SELECT id FROM boards WHERE name = $1 LIMIT 1) = posts.board_id
+		WHERE posts.post_num = $2 OR posts.reply_to = $2
+		ORDER BY posts.post_num, posts.time ASC`,
 		board,
 		thread,
 	)
