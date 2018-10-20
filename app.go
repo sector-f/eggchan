@@ -25,7 +25,7 @@ func (a *App) Initialize(user, password, dbname string) {
 		log.Fatal(err)
 	}
 
-	a.Router = mux.NewRouter()
+	a.Router = mux.NewRouter().StrictSlash(true)
 	a.initializeRoutes()
 	a.Router.NotFoundHandler = http.HandlerFunc(handleNotFound)
 }
@@ -35,15 +35,10 @@ func (a *App) Run(addr string) {
 }
 
 func (a *App) initializeRoutes() {
-	a.Router.HandleFunc("/categories/", a.getCategories).Methods("GET")
 	a.Router.HandleFunc("/categories", a.getCategories).Methods("GET")
-	a.Router.HandleFunc("/categories/{category}/", a.showCategory).Methods("GET")
 	a.Router.HandleFunc("/categories/{category}", a.showCategory).Methods("GET")
-	a.Router.HandleFunc("/boards/", a.getBoards).Methods("GET")
 	a.Router.HandleFunc("/boards", a.getBoards).Methods("GET")
-	a.Router.HandleFunc("/boards/{board}/", a.showBoard).Methods("GET")
 	a.Router.HandleFunc("/boards/{board}", a.showBoard).Methods("GET")
-	a.Router.HandleFunc("/boards/{board}/{thread}/", a.showThread).Methods("GET")
 	a.Router.HandleFunc("/boards/{board}/{thread}", a.showThread).Methods("GET")
 }
 
