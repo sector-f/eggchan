@@ -11,12 +11,12 @@ type category struct {
 	Name string `json:"name"`
 }
 
-func (c *category) getCategory(db *sql.DB) error {
+func (c *category) getCategoryFromDB(db *sql.DB) error {
 	return db.QueryRow("SELECT id, name FROM categories WHERE id=$1", c.ID).Scan(&c.ID, &c.Name)
 }
 
 // func getCategories(db *sql.DB, start, count int) ([]category, error) {
-func getCategories(db *sql.DB) ([]category, error) {
+func getCategoriesFromDB(db *sql.DB) ([]category, error) {
 	rows, err := db.Query("SELECT id, name FROM categories")
 
 	if err != nil {
@@ -44,7 +44,7 @@ type board struct {
 	Category    null.String `json:"category"`
 }
 
-func getBoards(db *sql.DB) ([]board, error) {
+func getBoardsFromDB(db *sql.DB) ([]board, error) {
 	rows, err := db.Query("SELECT boards.id, boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id")
 
 	if err != nil {
@@ -65,7 +65,7 @@ func getBoards(db *sql.DB) ([]board, error) {
 	return boards, nil
 }
 
-func showCategory(db *sql.DB, name string) ([]board, error) {
+func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
 	rows, err := db.Query("SELECT boards.id, boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1", name)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ type post struct {
 	Comment string    `json:"comment"`
 }
 
-func showBoard(db *sql.DB, name string) ([]thread, error) {
+func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	rows, err := db.Query(
 		`SELECT original_posts.post_num, original_posts.time,
 			CASE
@@ -133,7 +133,7 @@ func showBoard(db *sql.DB, name string) ([]thread, error) {
 	return threads, nil
 }
 
-func showThread(db *sql.DB, board string, thread int) ([]post, error) {
+func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
 	rows, err := db.Query(
 		`SELECT DISTINCT posts.post_num, posts.reply_to, posts.time, posts.comment
 		FROM posts

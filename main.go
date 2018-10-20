@@ -6,19 +6,15 @@ import (
 	"os"
 	// "github.com/lib/pq"
 	_ "log"
-	"net/http"
 )
 
-// [ ] List boards: `GET /boards`
-// [ ] List threads on a board: `GET /boards/<name>`
-// [ ] Display a thread: `GET /boards/<board>/<id>`
+// [x] List boards: `GET /boards`
+// [x] List threads on a board: `GET /boards/<name>`
+// [x] Display a thread: `GET /boards/<board>/<id>`
 // [ ] Post a thread: `POST /boards/<board>` (multipart/form-data using "comment" field)
 // [ ] Post a comment: `POST /boards/<board>/<id>` (multipart/form-data using "comment" field)
 // [x] List categories: `GET /categories`
-// [ ] List boards in a category: `GET /categories/<category>`
-
-func Unimplemented(_ http.ResponseWriter, _ *http.Request) {
-}
+// [x] List boards in a category: `GET /categories/<category>`
 
 func main() {
 	app := App{}
