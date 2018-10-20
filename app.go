@@ -27,6 +27,7 @@ func (a *App) Initialize(user, password, dbname string) {
 
 	a.Router = mux.NewRouter()
 	a.initializeRoutes()
+	a.Router.NotFoundHandler = http.HandlerFunc(handleNotFound)
 }
 
 func (a *App) Run(addr string) {
@@ -44,6 +45,10 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/boards/{board}", a.showBoard).Methods("GET")
 	a.Router.HandleFunc("/boards/{board}/{thread}/", a.showThread).Methods("GET")
 	a.Router.HandleFunc("/boards/{board}/{thread}", a.showThread).Methods("GET")
+}
+
+func handleNotFound(w http.ResponseWriter, r *http.Request) {
+	respondWithError(w, http.StatusNotFound, "Not found")
 }
 
 func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
