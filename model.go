@@ -93,7 +93,21 @@ type post struct {
 }
 
 func showBoard(db *sql.DB, name string) ([]post, error) {
-	rows, err := db.Query("SELECT posts.post_num, posts.reply_to, posts.time, posts.comment FROM posts LEFT JOIN boards ON boards.id = posts.board_id WHERE boards.name = $1 AND posts.reply_to IS NULL", name)
+	rows, err := db.Query(
+		`SELECT original_posts.post_num, original_posts.reply_to, original_posts.time, original_posts.comment
+		FROM original_posts
+		LEFT JOIN replies ON original_posts.post_num = replies.reply_to
+		WHERE original_posts.board_name = $1
+		GROUP BY original_posts.post_num, original_posts.reply_to, original_posts.time, original_posts.comment
+		ORDER BY
+			CASE
+				WHEN MAX(replies.time) IS NOT NULL THEN MAX(replies.time)
+				ELSE MAX(original_posts.time)
+			END
+		DESC;`,
+		name,
+	)
+
 	if err != nil {
 		return nil, err
 	}
