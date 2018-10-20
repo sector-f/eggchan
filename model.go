@@ -85,6 +85,15 @@ func showCategory(db *sql.DB, name string) ([]board, error) {
 	return boards, nil
 }
 
+// NB: threads and posts are stored in the same table
+
+type thread struct {
+	PostNum     int       `json:"post_num"`
+	Time        time.Time `json:"post_time"`
+	LatestReply time.Time `json:"latest_reply_time"`
+	Comment     string    `json:"comment"`
+}
+
 type post struct {
 	PostNum int       `json:"post_num"`
 	ReplyTo null.Int  `json:"reply_to"`
@@ -92,19 +101,18 @@ type post struct {
 	Comment string    `json:"comment"`
 }
 
-func showBoard(db *sql.DB, name string) ([]post, error) {
+func showBoard(db *sql.DB, name string) ([]thread, error) {
 	rows, err := db.Query(
-		`SELECT original_posts.post_num, original_posts.reply_to, original_posts.time, original_posts.comment
-		FROM original_posts
-		LEFT JOIN replies ON original_posts.post_num = replies.reply_to
-		WHERE original_posts.board_name = $1
-		GROUP BY original_posts.post_num, original_posts.reply_to, original_posts.time, original_posts.comment
-		ORDER BY
+		`SELECT original_posts.post_num, original_posts.time,
 			CASE
 				WHEN MAX(replies.time) IS NOT NULL THEN MAX(replies.time)
 				ELSE MAX(original_posts.time)
-			END
-		DESC;`,
+			END AS latest_reply, original_posts.comment
+		FROM original_posts
+		LEFT JOIN replies ON original_posts.post_num = replies.reply_to
+		WHERE original_posts.board_name = $1
+		GROUP BY original_posts.board_name, original_posts.time, original_posts.post_num, original_posts.comment
+		ORDER BY latest_reply DESC;`,
 		name,
 	)
 
@@ -113,16 +121,16 @@ func showBoard(db *sql.DB, name string) ([]post, error) {
 	}
 	defer rows.Close()
 
-	posts := []post{}
+	threads := []thread{}
 	for rows.Next() {
-		var p post
-		if err := rows.Scan(&p.PostNum, &p.ReplyTo, &p.Time, &p.Comment); err != nil {
+		var t thread
+		if err := rows.Scan(&t.PostNum, &t.Time, &t.LatestReply, &t.Comment); err != nil {
 			return nil, err
 		}
-		posts = append(posts, p)
+		threads = append(threads, t)
 	}
 
-	return posts, nil
+	return threads, nil
 }
 
 func showThread(db *sql.DB, board string, thread int) ([]post, error) {
