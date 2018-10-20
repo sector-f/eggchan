@@ -13,7 +13,8 @@ func Logger(inner http.Handler) http.Handler {
 		inner.ServeHTTP(w, r)
 
 		log.Printf(
-			"%s\t%s\t%s",
+			"%s\t%s\t%s\t%s",
+			r.RemoteAddr,
 			r.Method,
 			r.RequestURI,
 			time.Since(start),
