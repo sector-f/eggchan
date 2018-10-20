@@ -6,7 +6,6 @@ import (
 	"os"
 	// "github.com/lib/pq"
 	_ "log"
-	"net/http"
 )
 
 // [x] List boards: `GET /boards`

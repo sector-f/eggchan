@@ -26,7 +26,6 @@ func (a *App) Initialize(user, password, dbname string) {
 	}
 
 	a.Router = NewRouter()
-	// a.initializeRoutes()
 	a.Router.NotFoundHandler = http.HandlerFunc(handleNotFound)
 }
 
