@@ -40,6 +40,12 @@ CREATE TABLE IF NOT EXISTS comments (
 	comment TEXT NOT NULL
 );
 
+CREATE VIEW comments_with_board_info AS
+	SELECT b.id AS board_id, b.name AS board_name, c.id, c.post_num, c.reply_to, c.image, c.time, c.comment
+	FROM comments c
+	INNER JOIN boards b ON b.id = (SELECT board_id FROM threads INNER JOIN boards ON threads.board_id = boards.id);
+
+
 /*****************/
 
 CREATE FUNCTION threads_post_num_trigger() RETURNS trigger
