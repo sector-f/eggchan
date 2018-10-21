@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS threads (
 	comment TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS posts (
+CREATE TABLE IF NOT EXISTS comments (
 	id SERIAL PRIMARY KEY,
 	post_num INTEGER,
 	reply_to INTEGER REFERENCES threads,
@@ -60,7 +60,7 @@ CREATE TRIGGER threads_update_postnum
 
 /*****************/
 
-CREATE FUNCTION posts_post_num_trigger() RETURNS trigger
+CREATE FUNCTION comments_post_num_trigger() RETURNS trigger
 	LANGUAGE plpgsql AS $$
 	DECLARE
 		v_postnum INTEGER;
@@ -71,10 +71,10 @@ CREATE FUNCTION posts_post_num_trigger() RETURNS trigger
 	END;
 	$$;
 
-CREATE TRIGGER posts_update_postnum
-	BEFORE INSERT ON posts
+CREATE TRIGGER comments_update_postnum
+	BEFORE INSERT ON comments
 	FOR EACH ROW
-	EXECUTE PROCEDURE posts_post_num_trigger();
+	EXECUTE PROCEDURE comments_post_num_trigger();
 
 /*****************/
 
