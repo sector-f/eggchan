@@ -2,22 +2,17 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"gopkg.in/guregu/null.v3"
 	"time"
 )
 
 type category struct {
-	ID   int    `json:"-"`
 	Name string `json:"name"`
 }
 
-func (c *category) getCategoryFromDB(db *sql.DB) error {
-	return db.QueryRow("SELECT id, name FROM categories WHERE id=$1", c.ID).Scan(&c.ID, &c.Name)
-}
-
-// func getCategories(db *sql.DB, start, count int) ([]category, error) {
 func getCategoriesFromDB(db *sql.DB) ([]category, error) {
-	rows, err := db.Query("SELECT id, name FROM categories")
+	rows, err := db.Query("SELECT name FROM categories")
 
 	if err != nil {
 		return nil, err
@@ -28,7 +23,7 @@ func getCategoriesFromDB(db *sql.DB) ([]category, error) {
 	categories := []category{}
 	for rows.Next() {
 		var c category
-		if err := rows.Scan(&c.ID, &c.Name); err != nil {
+		if err := rows.Scan(&c.Name); err != nil {
 			return nil, err
 		}
 		categories = append(categories, c)
@@ -38,14 +33,13 @@ func getCategoriesFromDB(db *sql.DB) ([]category, error) {
 }
 
 type board struct {
-	ID          int         `json:"-"`
 	Name        string      `json:"name"`
 	Description null.String `json:"description"`
 	Category    null.String `json:"category"`
 }
 
 func getBoardsFromDB(db *sql.DB) ([]board, error) {
-	rows, err := db.Query("SELECT boards.id, boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id")
+	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id")
 
 	if err != nil {
 		return nil, err
@@ -56,7 +50,7 @@ func getBoardsFromDB(db *sql.DB) ([]board, error) {
 	boards := []board{}
 	for rows.Next() {
 		var b board
-		if err := rows.Scan(&b.ID, &b.Name, &b.Description, &b.Category); err != nil {
+		if err := rows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
 			return nil, err
 		}
 		boards = append(boards, b)
@@ -66,7 +60,7 @@ func getBoardsFromDB(db *sql.DB) ([]board, error) {
 }
 
 func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
-	rows, err := db.Query("SELECT boards.id, boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1", name)
+	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1", name)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +70,7 @@ func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
 	boards := []board{}
 	for rows.Next() {
 		var b board
-		if err := rows.Scan(&b.ID, &b.Name, &b.Description, &b.Category); err != nil {
+		if err := rows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
 			return nil, err
 		}
 		boards = append(boards, b)
@@ -96,7 +90,6 @@ type thread struct {
 
 type post struct {
 	PostNum int       `json:"post_num"`
-	ReplyTo null.Int  `json:"reply_to"`
 	Time    time.Time `json:"time"`
 	Comment string    `json:"comment"`
 }
@@ -104,24 +97,26 @@ type post struct {
 func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	rows, err := db.Query(
 		`SELECT
-			original_posts.post_num,
-			original_posts.time,
-			(SELECT COUNT(*) FROM replies WHERE replies.reply_to = original_posts.post_num AND replies.board_name = $1) as num_replies,
-			MAX(replies.time) AS latest_reply,
-			original_posts.comment,
+			threads.post_num,
+			threads.time,
+			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) as num_replies,
+			MAX(comments.time) AS latest_reply,
+			threads.comment,
 			CASE
-				WHEN MAX(replies.time) IS NOT NULL THEN MAX(replies.time)
-				ELSE MAX(original_posts.time)
+				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
+				ELSE MAX(threads.time)
 			END AS sort_latest_reply
-		FROM original_posts
-		LEFT JOIN replies ON original_posts.post_num = replies.reply_to
-		WHERE original_posts.board_name = $1
-		GROUP BY original_posts.board_name, original_posts.time, original_posts.post_num, original_posts.comment
-		ORDER BY sort_latest_reply DESC;`,
+		FROM threads
+		LEFT JOIN comments ON threads.id = comments.reply_to
+		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		GROUP BY threads.id
+		ORDER BY sort_latest_reply DESC`,
 		name,
 	)
+	// 	GROUP BY original_posts.board_name, original_posts.time, original_posts.post_num, original_posts.comment
 
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -130,6 +125,7 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	for rows.Next() {
 		var t thread
 		if err := rows.Scan(&t.PostNum, &t.Time, &t.NumReplies, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
+			fmt.Println(err)
 			return nil, err
 		}
 		threads = append(threads, t)
@@ -140,16 +136,23 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 
 func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
 	rows, err := db.Query(
-		`SELECT DISTINCT posts.post_num, posts.reply_to, posts.time, posts.comment
-		FROM posts
-		INNER JOIN boards ON (SELECT id FROM boards WHERE name = $1 LIMIT 1) = posts.board_id
-		WHERE posts.post_num = $2 OR posts.reply_to = $2
-		ORDER BY posts.post_num, posts.time ASC`,
+		`SELECT threads.post_num, threads.time, threads.comment
+		FROM threads
+		INNER JOIN boards ON threads.board_id = boards.id
+		WHERE boards.name = $1
+		AND threads.post_num = $2
+		UNION
+		SELECT comments.post_num, comments.time, comments.comment
+		FROM comments
+		INNER JOIN threads ON comments.reply_to = (SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2)
+		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		ORDER BY post_num ASC`,
 		board,
 		thread,
 	)
 
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -157,7 +160,8 @@ func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
 	posts := []post{}
 	for rows.Next() {
 		var p post
-		if err := rows.Scan(&p.PostNum, &p.ReplyTo, &p.Time, &p.Comment); err != nil {
+		if err := rows.Scan(&p.PostNum, &p.Time, &p.Comment); err != nil {
+			fmt.Println(err)
 			return nil, err
 		}
 		posts = append(posts, p)
@@ -168,7 +172,7 @@ func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
 
 func makeThreadInDB(db *sql.DB, board string, comment string) (int, error) {
 	rows, err := db.Query(
-		`INSERT INTO posts (board_id, comment)
+		`INSERT INTO threads (board_id, comment)
 		VALUES((SELECT id FROM boards WHERE name = $1), $2)
 		RETURNING post_num`,
 		board,
@@ -176,6 +180,7 @@ func makeThreadInDB(db *sql.DB, board string, comment string) (int, error) {
 	)
 
 	if err != nil {
+		fmt.Println(err)
 		return 0, err
 	}
 
@@ -193,8 +198,11 @@ func makeThreadInDB(db *sql.DB, board string, comment string) (int, error) {
 
 func makePostInDB(db *sql.DB, board string, thread int, comment string) (int, error) {
 	rows, err := db.Query(
-		`INSERT INTO posts (board_id, reply_to, comment)
-		VALUES((SELECT id FROM boards WHERE name = $1), $2, $3)
+		`INSERT INTO comments (reply_to, comment)
+		VALUES(
+			(SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2),
+			$3
+		)
 		RETURNING post_num`,
 		board,
 		thread,
@@ -202,6 +210,7 @@ func makePostInDB(db *sql.DB, board string, thread int, comment string) (int, er
 	)
 
 	if err != nil {
+		fmt.Println(err)
 		return 0, err
 	}
 
@@ -209,6 +218,7 @@ func makePostInDB(db *sql.DB, board string, thread int, comment string) (int, er
 	for rows.Next() {
 		var i int
 		if err := rows.Scan(&i); err != nil {
+			fmt.Println(err)
 			return 0, err
 		}
 		post_nums = append(post_nums, i)
@@ -220,9 +230,10 @@ func makePostInDB(db *sql.DB, board string, thread int, comment string) (int, er
 func checkIsOp(db *sql.DB, board string, thread int) (bool, error) {
 	rows, err := db.Query(
 		`SELECT post_num
-		FROM original_posts
-		WHERE board_name = $1
-		AND post_num = $2`,
+		FROM threads
+		INNER JOIN boards ON threads.board_id = boards.id
+		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		AND threads.post_num = $2`,
 		board,
 		thread,
 	)
