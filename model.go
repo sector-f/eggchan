@@ -88,10 +88,11 @@ func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
 // NB: threads and posts are stored in the same table
 
 type thread struct {
-	PostNum     int       `json:"post_num"`
-	Time        time.Time `json:"post_time"`
-	LatestReply time.Time `json:"latest_reply_time"`
-	Comment     string    `json:"comment"`
+	PostNum         int       `json:"post_num"`
+	Time            time.Time `json:"post_time"`
+	LatestReply     null.Time `json:"latest_reply_time"`
+	Comment         string    `json:"comment"`
+	SortLatestReply time.Time `json:"-"`
 }
 
 type post struct {
@@ -103,16 +104,16 @@ type post struct {
 
 func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	rows, err := db.Query(
-		`SELECT original_posts.post_num, original_posts.time,
+		`SELECT original_posts.post_num, original_posts.time, MAX(replies.time) AS latest_reply, original_posts.comment,
 			CASE
 				WHEN MAX(replies.time) IS NOT NULL THEN MAX(replies.time)
 				ELSE MAX(original_posts.time)
-			END AS latest_reply, original_posts.comment
+			END AS sort_latest_reply
 		FROM original_posts
 		LEFT JOIN replies ON original_posts.post_num = replies.reply_to
 		WHERE original_posts.board_name = $1
 		GROUP BY original_posts.board_name, original_posts.time, original_posts.post_num, original_posts.comment
-		ORDER BY latest_reply DESC;`,
+		ORDER BY sort_latest_reply DESC;`,
 		name,
 	)
 
@@ -124,7 +125,7 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	threads := []thread{}
 	for rows.Next() {
 		var t thread
-		if err := rows.Scan(&t.PostNum, &t.Time, &t.LatestReply, &t.Comment); err != nil {
+		if err := rows.Scan(&t.PostNum, &t.Time, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
 			return nil, err
 		}
 		threads = append(threads, t)
