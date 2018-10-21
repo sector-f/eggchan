@@ -85,8 +85,6 @@ func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
 	return boards, nil
 }
 
-// NB: threads and posts are stored in the same table
-
 type thread struct {
 	PostNum         int       `json:"post_num"`
 	Time            time.Time `json:"post_time"`
