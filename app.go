@@ -54,6 +54,16 @@ func (a *App) Initialize(user, password, dbname string) {
 			a.showBoard,
 		},
 		Route{
+			"POST",
+			"/boards/{board}",
+			a.postThread,
+		},
+		Route{
+			"POST",
+			"/boards/{board}/{thread}",
+			a.postReply,
+		},
+		Route{
 			"GET",
 			"/boards/{board}/{thread}",
 			a.showThread,

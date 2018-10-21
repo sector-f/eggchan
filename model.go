@@ -160,3 +160,84 @@ func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
 
 	return posts, nil
 }
+
+func makeThreadInDB(db *sql.DB, board string, comment string) (int, error) {
+	rows, err := db.Query(
+		`INSERT INTO posts (board_id, comment)
+		VALUES((SELECT id FROM boards WHERE name = $1), $2)
+		RETURNING post_num`,
+		board,
+		comment,
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	post_nums := []int{}
+	for rows.Next() {
+		var i int
+		if err := rows.Scan(&i); err != nil {
+			return 0, err
+		}
+		post_nums = append(post_nums, i)
+	}
+
+	return post_nums[0], nil
+}
+
+func makePostInDB(db *sql.DB, board string, thread int, comment string) (int, error) {
+	rows, err := db.Query(
+		`INSERT INTO posts (board_id, reply_to, comment)
+		VALUES((SELECT id FROM boards WHERE name = $1), $2, $3)
+		RETURNING post_num`,
+		board,
+		thread,
+		comment,
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	post_nums := []int{}
+	for rows.Next() {
+		var i int
+		if err := rows.Scan(&i); err != nil {
+			return 0, err
+		}
+		post_nums = append(post_nums, i)
+	}
+
+	return post_nums[0], nil
+}
+
+func checkIsOp(db *sql.DB, board string, thread int) (bool, error) {
+	rows, err := db.Query(
+		`SELECT post_num
+		FROM original_posts
+		WHERE board_name = $1
+		AND post_num = $2`,
+		board,
+		thread,
+	)
+
+	if err != nil {
+		return false, err
+	}
+
+	posts := []post{}
+	for rows.Next() {
+		var p post
+		if err := rows.Scan(&p.PostNum); err != nil {
+			return false, err
+		}
+		posts = append(posts, p)
+	}
+
+	if len(posts) == 0 {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
