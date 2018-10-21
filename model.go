@@ -103,6 +103,7 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 			MAX(comments.time) AS latest_reply,
 			threads.comment,
 			CASE
+				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= 300 THEN (SELECT comments.time FROM comments OFFSET 300 LIMIT 1)
 				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
 				ELSE MAX(threads.time)
 			END AS sort_latest_reply
@@ -113,7 +114,6 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 		ORDER BY sort_latest_reply DESC`,
 		name,
 	)
-	// 	GROUP BY original_posts.board_name, original_posts.time, original_posts.post_num, original_posts.comment
 
 	if err != nil {
 		fmt.Println(err)
