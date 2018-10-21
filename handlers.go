@@ -37,7 +37,7 @@ func (a *App) showBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["board"]
 
-	posts, err := showBoardFromDB(a.DB, name)
+	posts, err := showBoardFromDB(a.DB, name, a.BumpLimit)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid board")
 		return

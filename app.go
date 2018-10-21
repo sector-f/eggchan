@@ -19,11 +19,14 @@ type Route struct {
 type Routes []Route
 
 type App struct {
-	Router *mux.Router
-	DB     *sql.DB
+	Router    *mux.Router
+	DB        *sql.DB
+	BumpLimit int
 }
 
 func (a *App) Initialize(user, password, dbname string) {
+	a.BumpLimit = 300
+
 	connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", dbname)
 
 	var err error
