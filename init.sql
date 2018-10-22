@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS images (
 
 CREATE TABLE IF NOT EXISTS threads (
 	id SERIAL PRIMARY KEY,
+	subject TEXT,
+	author TEXT DEFAULT 'Anonymous',
 	post_num INTEGER,
 	board_id INTEGER REFERENCES boards,
 	image INTEGER REFERENCES images,
@@ -33,6 +35,7 @@ CREATE TABLE IF NOT EXISTS threads (
 
 CREATE TABLE IF NOT EXISTS comments (
 	id SERIAL PRIMARY KEY,
+	author TEXT DEFAULT 'Anonymous',
 	post_num INTEGER,
 	reply_to INTEGER REFERENCES threads,
 	image INTEGER REFERENCES images,

@@ -79,13 +79,14 @@ func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
 }
 
 type thread struct {
-	PostNum         int       `json:"post_num"`
-	Author          string    `json:"author"`
-	Time            time.Time `json:"post_time"`
-	NumReplies      int       `json:"num_replies"`
-	LatestReply     null.Time `json:"latest_reply_time"`
-	Comment         string    `json:"comment"`
-	SortLatestReply time.Time `json:"-"`
+	PostNum         int         `json:"post_num"`
+	Subject         null.String `json:"subject"`
+	Author          string      `json:"author"`
+	Time            time.Time   `json:"post_time"`
+	NumReplies      int         `json:"num_replies"`
+	LatestReply     null.Time   `json:"latest_reply_time"`
+	Comment         string      `json:"comment"`
+	SortLatestReply time.Time   `json:"-"`
 }
 
 type post struct {
@@ -99,6 +100,7 @@ func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) 
 	rows, err := db.Query(
 		`SELECT
 			threads.post_num,
+			threads.subject,
 			threads.author,
 			threads.time,
 			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) AS num_replies,
@@ -126,7 +128,7 @@ func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) 
 	threads := []thread{}
 	for rows.Next() {
 		var t thread
-		if err := rows.Scan(&t.PostNum, &t.Author, &t.Time, &t.NumReplies, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
+		if err := rows.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
 			return nil, err
 		}
 		threads = append(threads, t)
@@ -169,14 +171,20 @@ func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
 	return posts, nil
 }
 
-func makeThreadInDB(db *sql.DB, board string, comment string, author string) (int, error) {
+func makeThreadInDB(db *sql.DB, board string, comment string, author string, subject string) (int, error) {
 	rows, err := db.Query(
-		`INSERT INTO threads (board_id, comment, author)
-		VALUES((SELECT id FROM boards WHERE name = $1), $2, $3)
+		`INSERT INTO threads (board_id, comment, author, subject)
+		VALUES(
+			(SELECT id FROM boards WHERE name = $1),
+			$2,
+			$3,
+			CASE WHEN $4 = '' THEN NULL ELSE $4 END
+		)
 		RETURNING post_num`,
 		board,
 		comment,
 		author,
+		subject,
 	)
 
 	if err != nil {

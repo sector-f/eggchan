@@ -91,7 +91,9 @@ func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
 		name = "Anonymous"
 	}
 
-	post_num, err := makeThreadInDB(a.DB, board, comment, name)
+	subject := r.FormValue("subject")
+
+	post_num, err := makeThreadInDB(a.DB, board, comment, name, subject)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Error creating thread")
 		return
