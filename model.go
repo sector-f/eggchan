@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"gopkg.in/guregu/null.v3"
 	"time"
 )
@@ -117,7 +116,6 @@ func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) 
 	)
 
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -126,7 +124,6 @@ func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) 
 	for rows.Next() {
 		var t thread
 		if err := rows.Scan(&t.PostNum, &t.Time, &t.NumReplies, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		threads = append(threads, t)
@@ -153,7 +150,6 @@ func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
 	)
 
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -162,7 +158,6 @@ func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
 	for rows.Next() {
 		var p post
 		if err := rows.Scan(&p.PostNum, &p.Time, &p.Comment); err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		posts = append(posts, p)
@@ -181,7 +176,6 @@ func makeThreadInDB(db *sql.DB, board string, comment string) (int, error) {
 	)
 
 	if err != nil {
-		fmt.Println(err)
 		return 0, err
 	}
 
@@ -211,7 +205,6 @@ func makePostInDB(db *sql.DB, board string, thread int, comment string) (int, er
 	)
 
 	if err != nil {
-		fmt.Println(err)
 		return 0, err
 	}
 
@@ -219,7 +212,6 @@ func makePostInDB(db *sql.DB, board string, thread int, comment string) (int, er
 	for rows.Next() {
 		var i int
 		if err := rows.Scan(&i); err != nil {
-			fmt.Println(err)
 			return 0, err
 		}
 		post_nums = append(post_nums, i)
