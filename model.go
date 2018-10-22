@@ -99,7 +99,7 @@ func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) 
 		`SELECT
 			threads.post_num,
 			threads.time,
-			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) as num_replies,
+			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) AS num_replies,
 			MAX(comments.time) AS latest_reply,
 			threads.comment,
 			CASE
