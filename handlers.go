@@ -10,7 +10,7 @@ func handleNotFound(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotFound, "Not found")
 }
 
-func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
+func (a *Server) getCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := getCategoriesFromDB(a.DB)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
@@ -20,7 +20,7 @@ func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, categories)
 }
 
-func (a *App) showCategory(w http.ResponseWriter, r *http.Request) {
+func (a *Server) showCategory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["category"]
 
@@ -33,7 +33,7 @@ func (a *App) showCategory(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, boards)
 }
 
-func (a *App) showBoard(w http.ResponseWriter, r *http.Request) {
+func (a *Server) showBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["board"]
 
@@ -46,7 +46,7 @@ func (a *App) showBoard(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, posts)
 }
 
-func (a *App) showThread(w http.ResponseWriter, r *http.Request) {
+func (a *Server) showThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
@@ -65,7 +65,7 @@ func (a *App) showThread(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, posts)
 }
 
-func (a *App) getBoards(w http.ResponseWriter, r *http.Request) {
+func (a *Server) getBoards(w http.ResponseWriter, r *http.Request) {
 	boards, err := getBoardsFromDB(a.DB)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
@@ -75,7 +75,7 @@ func (a *App) getBoards(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, boards)
 }
 
-func (a *App) postThread(w http.ResponseWriter, r *http.Request) {
+func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
@@ -95,7 +95,7 @@ func (a *App) postThread(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, map[string]int{"post_num": post_num})
 }
 
-func (a *App) postReply(w http.ResponseWriter, r *http.Request) {
+func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
