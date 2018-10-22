@@ -103,7 +103,7 @@ func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) 
 			MAX(comments.time) AS latest_reply,
 			threads.comment,
 			CASE
-				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= $2 THEN (SELECT comments.time FROM comments OFFSET 300 LIMIT 1)
+				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= $2 THEN (SELECT comments.time FROM comments OFFSET $2 LIMIT 1)
 				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
 				ELSE MAX(threads.time)
 			END AS sort_latest_reply
