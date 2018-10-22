@@ -86,7 +86,12 @@ func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post_num, err := makeThreadInDB(a.DB, board, comment)
+	name := r.FormValue("name")
+	if name == "" {
+		name = "Anonymous"
+	}
+
+	post_num, err := makeThreadInDB(a.DB, board, comment, name)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Error creating thread")
 		return
@@ -123,7 +128,12 @@ func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post_num, err := makePostInDB(a.DB, board, thread, comment)
+	name := r.FormValue("name")
+	if name == "" {
+		name = "Anonymous"
+	}
+
+	post_num, err := makePostInDB(a.DB, board, thread, comment, name)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Error creating post")
 		return
