@@ -11,7 +11,7 @@ type category struct {
 }
 
 func getCategoriesFromDB(db *sql.DB) ([]category, error) {
-	rows, err := db.Query("SELECT name FROM categories")
+	rows, err := db.Query("SELECT name FROM categories ORDER BY name ASC")
 
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ type board struct {
 }
 
 func getBoardsFromDB(db *sql.DB) ([]board, error) {
-	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id")
+	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id ORDER BY boards.name ASC")
 
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func getBoardsFromDB(db *sql.DB) ([]board, error) {
 }
 
 func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
-	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1", name)
+	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1 ORDER BY boards.name ASC", name)
 	if err != nil {
 		return nil, err
 	}
