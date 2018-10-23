@@ -96,7 +96,7 @@ type post struct {
 	Comment string    `json:"comment"`
 }
 
-func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) {
+func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	rows, err := db.Query(
 		`SELECT
 			threads.post_num,
@@ -107,7 +107,7 @@ func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) 
 			MAX(comments.time) AS latest_reply,
 			threads.comment,
 			CASE
-				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= $2 THEN (SELECT comments.time FROM comments OFFSET $2 LIMIT 1)
+				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= (SELECT bump_limit FROM boards WHERE name = $1)  THEN (SELECT comments.time FROM comments OFFSET (SELECT bump_limit FROM boards WHERE name = $1) LIMIT 1)
 				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
 				ELSE MAX(threads.time)
 			END AS sort_latest_reply
@@ -117,7 +117,6 @@ func showBoardFromDB(db *sql.DB, name string, bump_limit int) ([]thread, error) 
 		GROUP BY threads.id
 		ORDER BY sort_latest_reply DESC`,
 		name,
-		bump_limit,
 	)
 
 	if err != nil {

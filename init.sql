@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS boards (
 	name TEXT UNIQUE NOT NULL,
 	description TEXT,
 	category INTEGER REFERENCES categories,
+	bump_limit INTEGER NOT NULL DEFAULT 300,
 	post_limit INTEGER NOT NULL DEFAULT 500
 );
 
