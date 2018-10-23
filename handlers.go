@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 	"net/http"
 	"strconv"
 )
@@ -137,7 +138,11 @@ func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 
 	post_num, err := makePostInDB(a.DB, board, thread, comment, name)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Error creating post")
+		if err.(*pq.Error).Message == "Thread has reached post limit" {
+			respondWithError(w, http.StatusBadRequest, "Thread has reached post limit")
+		} else {
+			respondWithError(w, http.StatusBadRequest, "Error creating post")
+		}
 		return
 	}
 

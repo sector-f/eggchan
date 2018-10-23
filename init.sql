@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS boards (
 	id SERIAL PRIMARY KEY,
 	name TEXT UNIQUE NOT NULL,
 	description TEXT,
-	category INTEGER REFERENCES categories
+	category INTEGER REFERENCES categories,
+	post_limit INTEGER NOT NULL DEFAULT 500
 );
 
 /* Table board_postnum keeps track of the highest post number on each board */
@@ -43,11 +44,24 @@ CREATE TABLE IF NOT EXISTS comments (
 	comment TEXT NOT NULL
 );
 
-CREATE VIEW comments_with_board_info AS
-	SELECT b.id AS board_id, b.name AS board_name, c.id, c.post_num, c.reply_to, c.image, c.time, c.comment
-	FROM comments c
-	INNER JOIN boards b ON b.id = (SELECT board_id FROM threads INNER JOIN boards ON threads.board_id = boards.id);
+/*****************/
 
+CREATE FUNCTION thread_lock_check_trigger() RETURNS trigger
+	LANGUAGE plpgsql AS $$
+	BEGIN
+		IF
+			(SELECT COUNT(*) FROM comments WHERE reply_to = NEW.reply_to) >= (SELECT b.post_limit FROM boards b WHERE b.id = (SELECT b.id FROM boards b INNER JOIN threads t ON b.id = t.board_id WHERE t.id = NEW.reply_to))
+		THEN
+			RAISE EXCEPTION 'Thread has reached post limit';
+		END IF;
+		RETURN NEW;
+	END;
+	$$;
+
+CREATE TRIGGER thread_lock_check
+	BEFORE INSERT ON comments
+	FOR EACH ROW
+	EXECUTE PROCEDURE thread_lock_check_trigger();
 
 /*****************/
 
