@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS boards (
 	description TEXT,
 	category INTEGER REFERENCES categories,
 	bump_limit INTEGER NOT NULL DEFAULT 300,
-	post_limit INTEGER NOT NULL DEFAULT 500
+	post_limit INTEGER NOT NULL DEFAULT 500,
+	max_num_threads INTEGER NOT NULL DEFAULT 30
 );
 
 /* Table board_postnum keeps track of the highest post number on each board */
@@ -39,11 +40,34 @@ CREATE TABLE IF NOT EXISTS comments (
 	id SERIAL PRIMARY KEY,
 	author TEXT DEFAULT 'Anonymous',
 	post_num INTEGER,
-	reply_to INTEGER REFERENCES threads,
+	reply_to INTEGER REFERENCES threads ON DELETE CASCADE,
 	image INTEGER REFERENCES images,
 	time TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
 	comment TEXT NOT NULL
 );
+
+CREATE VIEW last_reply_time AS
+SELECT ROW_NUMBER() OVER(PARTITION BY boards.id ORDER BY
+			CASE
+				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= (SELECT bump_limit FROM boards WHERE boards.id = threads.board_id) THEN (SELECT comments.time FROM comments OFFSET (SELECT bump_limit FROM boards WHERE boards.id = threads.board_id) LIMIT 1)
+				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
+				ELSE MAX(threads.time)
+			END DESC) AS sort_number, boards.id AS board_id, boards.max_num_threads, threads.id AS thread_id
+FROM threads
+LEFT JOIN comments ON comments.reply_to = threads.id
+LEFT JOIN boards ON boards.id = threads.board_id
+GROUP BY boards.id, threads.id
+ORDER BY boards.id, sort_number;
+
+/* CREATE VIEW comments_with_board_info AS */
+/* SELECT */
+/* 	b.id AS board_id, b.name AS board_name, b.max_num_threads AS board_max_num_threads, */
+/* 	c.id, c.author, c.post_num, c.reply_to, c.image, c.time, c.comment */
+/* FROM boards b */
+/* INNER JOIN threads t ON t.board_id = b.id */
+/* INNER JOIN comments c ON c.reply_to = t.id */
+/* GROUP BY b.id, c.id */
+/* ORDER BY b.id, c.post_num; */
 
 /*****************/
 
@@ -63,6 +87,44 @@ CREATE TRIGGER thread_lock_check
 	BEFORE INSERT ON comments
 	FOR EACH ROW
 	EXECUTE PROCEDURE thread_lock_check_trigger();
+
+/*****************/
+
+CREATE FUNCTION threads_prune_board_trigger() RETURNS trigger
+	LANGUAGE plpgsql AS $$
+	BEGIN
+		DELETE FROM threads t
+		USING last_reply_time l
+		WHERE t.id = l.thread_id
+		AND l.board_id = NEW.board_id
+		AND l.sort_number > l.max_num_threads;
+		RETURN NEW;
+	END;
+	$$;
+
+CREATE TRIGGER threads_prune_board
+	AFTER INSERT ON threads
+	FOR EACH ROW
+	EXECUTE PROCEDURE threads_prune_board_trigger();
+
+/*****************/
+
+CREATE FUNCTION comments_prune_board_trigger() RETURNS trigger
+	LANGUAGE plpgsql AS $$
+	BEGIN
+		DELETE FROM threads t
+		USING last_reply_time l
+		WHERE t.id = l.thread_id
+		AND l.board_id = (SELECT board_id FROM threads WHERE threads.id = NEW.reply_to)
+		AND l.sort_number > l.max_num_threads;
+		RETURN NEW;
+	END;
+	$$;
+
+CREATE TRIGGER comments_prune_board
+	AFTER INSERT ON comments
+	FOR EACH ROW
+	EXECUTE PROCEDURE comments_prune_board_trigger();
 
 /*****************/
 
