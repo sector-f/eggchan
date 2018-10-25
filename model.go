@@ -136,38 +136,70 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	return threads, nil
 }
 
-func showThreadFromDB(db *sql.DB, board string, thread int) ([]post, error) {
-	rows, err := db.Query(
-		`SELECT threads.post_num, threads.author, threads.time, threads.comment
+type threadReply struct {
+	thread thread  `json:"op,omitempty"`
+	posts  *[]post `json:"posts,omitempty"`
+}
+
+func showThreadFromDB(db *sql.DB, board string, thread_num int) (threadReply, error) {
+	var reply threadReply
+
+	t_row := db.QueryRow(
+		`SELECT
+			threads.post_num,
+			threads.subject,
+			threads.author,
+			threads.time,
+			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) AS num_replies,
+			MAX(comments.time) AS latest_reply,
+			threads.comment,
+			CASE
+				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= (SELECT bump_limit FROM boards WHERE name = $1)  THEN (SELECT comments.time FROM comments OFFSET (SELECT bump_limit FROM boards WHERE name = $1) LIMIT 1)
+				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
+				ELSE MAX(threads.time)
+			END AS sort_latest_reply
 		FROM threads
-		INNER JOIN boards ON threads.board_id = boards.id
-		WHERE boards.name = $1
-		AND threads.post_num = $2
-		UNION
-		SELECT comments.post_num, comments.author, comments.time, comments.comment
-		FROM comments
-		INNER JOIN threads ON comments.reply_to = (SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2)
+		LEFT JOIN comments ON threads.id = comments.reply_to
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		AND threads.post_num = $2
+		GROUP BY threads.id
+		ORDER BY sort_latest_reply DESC`,
+		board,
+		thread_num,
+	)
+
+	var t thread
+	if err := t_row.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
+		return reply, err
+	}
+
+	c_rows, err := db.Query(
+		`SELECT comments.post_num, comments.author, comments.time, comments.comment
+		FROM comments
+		INNER JOIN threads ON comments.reply_to = threads.id
+		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		AND comments.reply_to = (SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2)
 		ORDER BY post_num ASC`,
 		board,
-		thread,
+		thread_num,
 	)
 
 	if err != nil {
-		return nil, err
+		return reply, err
 	}
-	defer rows.Close()
+	defer c_rows.Close()
 
 	posts := []post{}
-	for rows.Next() {
+	for c_rows.Next() {
 		var p post
-		if err := rows.Scan(&p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
-			return nil, err
+		if err := c_rows.Scan(&p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
+			return reply, err
 		}
 		posts = append(posts, p)
 	}
 
-	return posts, nil
+	reply = threadReply{thread: t, posts: &posts}
+	return reply, nil
 }
 
 func makeThreadInDB(db *sql.DB, board string, comment string, author string, subject string) (int, error) {
