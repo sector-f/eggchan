@@ -78,6 +78,11 @@ func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
 	return boards, nil
 }
 
+type boardReply struct {
+	Board   board    `json:"board"`
+	Threads []thread `json:"threads"`
+}
+
 type thread struct {
 	PostNum         int         `json:"post_num"`
 	Subject         null.String `json:"subject"`
@@ -96,7 +101,21 @@ type post struct {
 	Comment string    `json:"comment"`
 }
 
-func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
+func showBoardFromDB(db *sql.DB, name string) (boardReply, error) {
+	var reply boardReply
+
+	b_row := db.QueryRow(
+		`SELECT boards.name, boards.description, boards.category
+		FROM boards
+		WHERE boards.name = $1`,
+		name,
+	)
+
+	var b board
+	if err := b_row.Scan(&b.Name, &b.Description, &b.Category); err != nil {
+		return reply, err
+	}
+
 	rows, err := db.Query(
 		`SELECT
 			threads.post_num,
@@ -120,7 +139,7 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	)
 
 	if err != nil {
-		return nil, err
+		return reply, err
 	}
 	defer rows.Close()
 
@@ -128,12 +147,13 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 	for rows.Next() {
 		var t thread
 		if err := rows.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
-			return nil, err
+			return reply, err
 		}
 		threads = append(threads, t)
 	}
 
-	return threads, nil
+	reply = boardReply{b, threads}
+	return reply, nil
 }
 
 type threadReply struct {
