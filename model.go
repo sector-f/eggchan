@@ -137,8 +137,8 @@ func showBoardFromDB(db *sql.DB, name string) ([]thread, error) {
 }
 
 type threadReply struct {
-	thread thread  `json:"op,omitempty"`
-	posts  *[]post `json:"posts,omitempty"`
+	Thread thread `json:"op"`
+	Posts  []post `json:"posts"`
 }
 
 func showThreadFromDB(db *sql.DB, board string, thread_num int) (threadReply, error) {
@@ -198,7 +198,7 @@ func showThreadFromDB(db *sql.DB, board string, thread_num int) (threadReply, er
 		posts = append(posts, p)
 	}
 
-	reply = threadReply{thread: t, posts: &posts}
+	reply = threadReply{t, posts}
 	return reply, nil
 }
 
