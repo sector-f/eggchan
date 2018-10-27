@@ -11,9 +11,11 @@ import (
 )
 
 type Route struct {
-	Method      string
-	Pattern     string
-	HandlerFunc http.HandlerFunc
+	Method       string
+	Pattern      string
+	HandlerFunc  http.HandlerFunc
+	AuthRequired bool
+	Permission   string
 }
 
 type Routes []Route
@@ -37,36 +39,50 @@ func (a *Server) Initialize(user, password, dbname string) {
 			"GET",
 			"/categories",
 			a.getCategories,
+			false,
+			"",
 		},
 		Route{
 			"GET",
 			"/categories/{category}",
 			a.showCategory,
+			false,
+			"",
 		},
 		Route{
 			"GET",
 			"/boards",
 			a.getBoards,
+			false,
+			"",
 		},
 		Route{
 			"GET",
 			"/boards/{board}",
 			a.showBoard,
+			false,
+			"",
 		},
 		Route{
 			"POST",
 			"/boards/{board}",
 			a.postThread,
+			false,
+			"",
 		},
 		Route{
 			"POST",
 			"/boards/{board}/{thread}",
 			a.postReply,
+			false,
+			"",
 		},
 		Route{
 			"GET",
 			"/boards/{board}/{thread}",
 			a.showThread,
+			false,
+			"",
 		},
 	}
 
@@ -78,15 +94,13 @@ func (a *Server) Initialize(user, password, dbname string) {
 		handler = route.HandlerFunc
 		handler = Logger(handler)
 
-		router.
-			Methods(route.Method).
-			Path(route.Pattern).
-			Handler(handler)
-
-		router.
-			Methods(route.Method).
-			Path(route.Pattern + "/").
-			Handler(handler)
+		if route.AuthRequired {
+			router.Methods(route.Method).Path(route.Pattern).Handler(a.auth(handler, route.Permission))
+			router.Methods(route.Method).Path(route.Pattern + "/").Handler(a.auth(handler, route.Permission))
+		} else {
+			router.Methods(route.Method).Path(route.Pattern).Handler(handler)
+			router.Methods(route.Method).Path(route.Pattern + "/").Handler(handler)
+		}
 	}
 
 	a.Router = router

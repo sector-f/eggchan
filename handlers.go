@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
+	_ "golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strconv"
 )

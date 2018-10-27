@@ -46,6 +46,30 @@ CREATE TABLE IF NOT EXISTS comments (
 	comment TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS users (
+	id SERIAL PRIMARY KEY,
+	username TEXT UNIQUE NOT NULL,
+	password TEXT NOT NULL,
+);
+
+CREATE TABLE IF NOT EXISTS permissions (
+	id SERIAL PRIMARY KEY,
+	name TEXT UNIQUE NOT NULL
+);
+
+INSERT INTO permissions (name) VALUES
+	('create_board'),
+	('delete_board'),
+	('delete_thread'),
+	('delete_post');
+
+CREATE TABLE IF NOT EXISTS user_permissions (
+	id SERIAL PRIMARY KEY,
+	user_id INT NOT NULL REFERENCES users,
+	permission INT NOT NULL REFERENCES permissions,
+	UNIQUE (user_id, permission)
+);
+
 CREATE VIEW last_reply_time AS
 SELECT ROW_NUMBER() OVER(PARTITION BY boards.id ORDER BY
 			CASE
