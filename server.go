@@ -92,15 +92,14 @@ func (a *Server) Initialize(user, password, dbname string) {
 	for _, route := range routes {
 		var handler http.Handler
 		handler = route.HandlerFunc
-		handler = Logger(handler)
 
 		if route.AuthRequired {
-			router.Methods(route.Method).Path(route.Pattern).Handler(a.auth(handler, route.Permission))
-			router.Methods(route.Method).Path(route.Pattern + "/").Handler(a.auth(handler, route.Permission))
-		} else {
-			router.Methods(route.Method).Path(route.Pattern).Handler(handler)
-			router.Methods(route.Method).Path(route.Pattern + "/").Handler(handler)
+			handler = a.auth(handler, route.Permission)
 		}
+
+		handler = Logger(handler)
+		router.Methods(route.Method).Path(route.Pattern).Handler(handler)
+		router.Methods(route.Method).Path(route.Pattern + "/").Handler(handler)
 	}
 
 	a.Router = router
