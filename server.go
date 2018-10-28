@@ -35,55 +35,15 @@ func (a *Server) Initialize(user, password, dbname string) {
 	}
 
 	var routes = Routes{
-		Route{
-			"GET",
-			"/categories",
-			a.getCategories,
-			false,
-			"",
-		},
-		Route{
-			"GET",
-			"/categories/{category}",
-			a.showCategory,
-			false,
-			"",
-		},
-		Route{
-			"GET",
-			"/boards",
-			a.getBoards,
-			false,
-			"",
-		},
-		Route{
-			"GET",
-			"/boards/{board}",
-			a.showBoard,
-			false,
-			"",
-		},
-		Route{
-			"POST",
-			"/boards/{board}",
-			a.postThread,
-			false,
-			"",
-		},
-		Route{
-			"POST",
-			"/boards/{board}/{thread}",
-			a.postReply,
-			false,
-			"",
-		},
-		Route{
-			"GET",
-			"/boards/{board}/{thread}",
-			a.showThread,
-			false,
-			"",
-		},
+		Route{"GET", "/categories", a.getCategories, false, ""},
+		Route{"GET", "/categories/{category}", a.showCategory, false, ""},
+
+		Route{"GET", "/boards", a.getBoards, false, ""},
+		Route{"GET", "/boards/{board}/threads", a.showBoard, false, ""},
+		Route{"POST", "/boards/{board}/threads", a.postThread, false, ""},
+
+		Route{"GET", "/boards/{board}/threads/{thread}", a.showThread, false, ""},
+		Route{"POST", "/boards/{board}/threads/{thread}", a.postReply, false, ""},
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
