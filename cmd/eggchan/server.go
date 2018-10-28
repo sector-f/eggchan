@@ -40,7 +40,7 @@ func (a *Server) Initialize(user, password, dbname string) {
 
 		Route{"GET", "/boards", a.getBoards, false, ""},
 		Route{"GET", "/boards/{board}", a.showBoard, false, ""},
-		Route{"POST", "/boards/{board}/threads", a.postThread, false, ""},
+		Route{"POST", "/boards/{board}", a.postThread, false, ""},
 
 		Route{"GET", "/boards/{board}/{thread}", a.showThread, false, ""},
 		Route{"POST", "/boards/{board}/{thread}", a.postReply, false, ""},
