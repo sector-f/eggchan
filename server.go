@@ -86,7 +86,7 @@ func (a *Server) Initialize(user, password, dbname string) {
 		},
 	}
 
-	router := mux.NewRouter()
+	router := mux.NewRouter().StrictSlash(true)
 	router.NotFoundHandler = http.HandlerFunc(handleNotFound)
 
 	for _, route := range routes {
@@ -99,7 +99,6 @@ func (a *Server) Initialize(user, password, dbname string) {
 
 		handler = Logger(handler)
 		router.Methods(route.Method).Path(route.Pattern).Handler(handler)
-		router.Methods(route.Method).Path(route.Pattern + "/").Handler(handler)
 	}
 
 	a.Router = router
