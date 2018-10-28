@@ -351,3 +351,20 @@ func getUserAuthorization(db *sql.DB, name string, perm string) (bool, error) {
 		return false, nil
 	}
 }
+
+func deleteThreadInDB(db *sql.DB, board string, thread int) (int64, error) {
+	result, err := db.Exec(
+		`DELETE FROM threads
+		WHERE board_id = (SELECT id FROM boards WHERE name = $1)
+		AND post_num = $2`,
+		board,
+		thread,
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	count, _ := result.RowsAffected()
+	return count, nil
+}

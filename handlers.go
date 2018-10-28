@@ -6,6 +6,7 @@ import (
 	_ "golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +61,7 @@ func (a *Server) showThread(w http.ResponseWriter, r *http.Request) {
 
 	posts, err := showThreadFromDB(a.DB, board, thread)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid board")
+		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
 		return
 	}
 
@@ -101,7 +102,7 @@ func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, map[string]int{"post_num": post_num})
+	respondWithJSON(w, http.StatusCreated, map[string]int{"post_num": post_num})
 }
 
 func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +133,7 @@ func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := r.FormValue("name")
+	name := strings.TrimSpace(r.FormValue("name"))
 	if name == "" {
 		name = "Anonymous"
 	}
@@ -140,12 +141,45 @@ func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 	post_num, err := makePostInDB(a.DB, board, thread, comment, name)
 	if err != nil {
 		if err.(*pq.Error).Message == "Thread has reached post limit" {
-			respondWithError(w, http.StatusBadRequest, "Thread has reached post limit")
+			respondWithError(w, http.StatusForbidden, "Thread has reached post limit")
 		} else {
-			respondWithError(w, http.StatusBadRequest, "Error creating post")
+			respondWithError(w, http.StatusInternalServerError, "Error creating post")
 		}
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, map[string]int{"post_num": post_num})
+	respondWithJSON(w, http.StatusCreated, map[string]int{"post_num": post_num})
+}
+
+func (a *Server) deleteThread(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	board := vars["board"]
+
+	thread, err := strconv.Atoi(vars["thread"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid thread ID")
+		return
+	}
+
+	is_op, err := checkIsOp(a.DB, board, thread)
+
+	if !is_op {
+		respondWithError(w, http.StatusBadRequest, "Specified post is not OP")
+		return
+	}
+
+	deleted_count, err := deleteThreadInDB(a.DB, board, thread)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not delete thread")
+		return
+	}
+
+	switch deleted_count {
+	case 0:
+		respondWithJSON(w, http.StatusNotFound, SuccessMessage{"Thread not found"})
+	case 1:
+		respondWithJSON(w, http.StatusOK, SuccessMessage{"Thread deleted"})
+	default:
+		respondWithJSON(w, http.StatusInternalServerError, SuccessMessage{"Multiple threads were deleted--this is probably an error"})
+	}
 }

@@ -39,11 +39,13 @@ func (a *Server) Initialize(user, password, dbname string) {
 		Route{"GET", "/categories/{category}", a.showCategory, false, ""},
 
 		Route{"GET", "/boards", a.getBoards, false, ""},
-		Route{"GET", "/boards/{board}/threads", a.showBoard, false, ""},
+		Route{"GET", "/boards/{board}", a.showBoard, false, ""},
 		Route{"POST", "/boards/{board}/threads", a.postThread, false, ""},
 
 		Route{"GET", "/boards/{board}/threads/{thread}", a.showThread, false, ""},
 		Route{"POST", "/boards/{board}/threads/{thread}", a.postReply, false, ""},
+
+		Route{"DELETE", "/boards/{board}/threads/{thread}", a.deleteThread, true, "delete_thread"},
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
@@ -62,6 +64,10 @@ func (a *Server) Initialize(user, password, dbname string) {
 	}
 
 	a.Router = router
+}
+
+type SuccessMessage struct {
+	Message string `json:"message"`
 }
 
 func (a *Server) Run(addr string) {
