@@ -1,16 +1,70 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"syscall"
 
-	// "github.com/urfave/cli"
+	_ "github.com/lib/pq"
+	"github.com/urfave/cli"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
 func main() {
+	app := cli.NewApp()
+
+	app.Commands = []cli.Command{
+		{
+			Name:  "add-user",
+			Usage: "Add a new user to the database",
+			Flags: []cli.Flag{cli.StringFlag{
+				Name:   "database, d",
+				Usage:  "Database name",
+				EnvVar: "EGGCHAN_DB_NAME",
+			},
+				cli.StringFlag{
+					Name:   "username, u",
+					Usage:  "Database username",
+					EnvVar: "EGGCHAN_DB_USERNAME",
+				},
+				cli.StringFlag{
+					Name:   "password, p",
+					Usage:  "Database password",
+					EnvVar: "EGGCHAN_DB_PASSWORD",
+				},
+			},
+			Action: func(ctx *cli.Context) error {
+				connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", ctx.String("database"))
+
+				var err error
+				db, err := sql.Open("postgres", connectionString)
+				if err != nil {
+					return err
+				}
+
+				username := ctx.Args().Get(0)
+				if username != "" {
+					addUser(db, username)
+				} else {
+					fmt.Println("No username provided")
+					os.Exit(1)
+				}
+
+				return nil
+			},
+		},
+	}
+
+	err := app.Run(os.Args)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+}
+
+func addUser(db *sql.DB, user string) {
 	passwd1, err := getPasswd("Enter password: ")
 	if err != nil {
 		fmt.Println("Error: ", err)
@@ -34,7 +88,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println(string(hashed))
+	_, err = db.Exec(
+		`INSERT INTO users (username, password) VALUES ($1, $2)`,
+		user,
+		hashed,
+	)
+
+	if err != nil {
+		fmt.Println("Error: ", err)
+	} else {
+		fmt.Println("User", user, "added successfully")
+	}
 }
 
 func getPasswd(prompt string) (string, error) {
