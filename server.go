@@ -42,10 +42,11 @@ func (a *Server) Initialize(user, password, dbname string) {
 		Route{"GET", "/boards/{board}", a.showBoard, false, ""},
 		Route{"POST", "/boards/{board}/threads", a.postThread, false, ""},
 
-		Route{"GET", "/boards/{board}/threads/{thread}", a.showThread, false, ""},
-		Route{"POST", "/boards/{board}/threads/{thread}", a.postReply, false, ""},
+		Route{"GET", "/boards/{board}/{thread}", a.showThread, false, ""},
+		Route{"POST", "/boards/{board}/{thread}", a.postReply, false, ""},
 
 		Route{"DELETE", "/boards/{board}/threads/{thread}", a.deleteThread, true, "delete_thread"},
+		Route{"DELETE", "/boards/{board}/comments/{comment}", a.deleteComment, true, "delete_post"},
 	}
 
 	router := mux.NewRouter().StrictSlash(true)

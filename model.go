@@ -368,3 +368,21 @@ func deleteThreadInDB(db *sql.DB, board string, thread int) (int64, error) {
 	count, _ := result.RowsAffected()
 	return count, nil
 }
+
+func deleteCommentInDB(db *sql.DB, board string, comment int) (int64, error) {
+	result, err := db.Exec(
+		`DELETE FROM comments
+		USING threads
+		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		AND comments.post_num = $2`,
+		board,
+		comment,
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	count, _ := result.RowsAffected()
+	return count, nil
+}

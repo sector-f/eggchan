@@ -164,7 +164,7 @@ func (a *Server) deleteThread(w http.ResponseWriter, r *http.Request) {
 	is_op, err := checkIsOp(a.DB, board, thread)
 
 	if !is_op {
-		respondWithError(w, http.StatusBadRequest, "Specified post is not OP")
+		respondWithError(w, http.StatusBadRequest, "Invalid thread ID")
 		return
 	}
 
@@ -181,5 +181,38 @@ func (a *Server) deleteThread(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, http.StatusOK, SuccessMessage{"Thread deleted"})
 	default:
 		respondWithJSON(w, http.StatusInternalServerError, SuccessMessage{"Multiple threads were deleted--this is probably an error"})
+	}
+}
+
+func (a *Server) deleteComment(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	board := vars["board"]
+
+	thread, err := strconv.Atoi(vars["comment"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid comment ID")
+		return
+	}
+
+	is_op, err := checkIsOp(a.DB, board, thread)
+
+	if is_op {
+		respondWithError(w, http.StatusBadRequest, "Invalid comment ID")
+		return
+	}
+
+	deleted_count, err := deleteCommentInDB(a.DB, board, thread)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not delete comment")
+		return
+	}
+
+	switch deleted_count {
+	case 0:
+		respondWithJSON(w, http.StatusNotFound, SuccessMessage{"Comment not found"})
+	case 1:
+		respondWithJSON(w, http.StatusOK, SuccessMessage{"Comment deleted"})
+	default:
+		respondWithJSON(w, http.StatusInternalServerError, SuccessMessage{"Multiple comments were deleted--this is probably an error"})
 	}
 }
