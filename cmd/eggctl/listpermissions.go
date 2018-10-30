@@ -2,11 +2,8 @@ package main
 
 import (
 	"database/sql"
-	// "errors"
 	"fmt"
 	"strings"
-	// "os"
-	// "syscall"
 
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
