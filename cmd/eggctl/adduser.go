@@ -13,7 +13,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-func addUserSubcommand(ctx *cli.Context) error {
+func addUser(ctx *cli.Context) error {
 	connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", ctx.String("database"))
 
 	var err error
