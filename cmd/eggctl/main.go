@@ -80,6 +80,29 @@ func main() {
 				return grantPermissions(ctx)
 			},
 		},
+		{
+			Name:  "revoke-permissions",
+			Usage: "Revoke permissions from a user",
+			Flags: []cli.Flag{cli.StringFlag{
+				Name:   "database, d",
+				Usage:  "Database name",
+				EnvVar: "EGGCHAN_DB_NAME",
+			},
+				cli.StringFlag{
+					Name:   "username, u",
+					Usage:  "Database username",
+					EnvVar: "EGGCHAN_DB_USERNAME",
+				},
+				cli.StringFlag{
+					Name:   "password, p",
+					Usage:  "Database password",
+					EnvVar: "EGGCHAN_DB_PASSWORD",
+				},
+			},
+			Action: func(ctx *cli.Context) error {
+				return revokePermissions(ctx)
+			},
+		},
 	}
 
 	err := app.Run(os.Args)
