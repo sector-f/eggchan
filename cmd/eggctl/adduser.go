@@ -13,6 +13,32 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+func addUserCommand() cli.Command {
+	return cli.Command{
+		Name:  "add-user",
+		Usage: "Add a new user to the database",
+		Flags: []cli.Flag{cli.StringFlag{
+			Name:   "database, d",
+			Usage:  "Database name",
+			EnvVar: "EGGCHAN_DB_NAME",
+		},
+			cli.StringFlag{
+				Name:   "username, u",
+				Usage:  "Database username",
+				EnvVar: "EGGCHAN_DB_USERNAME",
+			},
+			cli.StringFlag{
+				Name:   "password, p",
+				Usage:  "Database password",
+				EnvVar: "EGGCHAN_DB_PASSWORD",
+			},
+		},
+		Action: func(ctx *cli.Context) error {
+			return addUser(ctx)
+		},
+	}
+}
+
 func addUser(ctx *cli.Context) error {
 	connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", ctx.String("database"))
 

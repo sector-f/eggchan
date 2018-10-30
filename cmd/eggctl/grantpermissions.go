@@ -9,6 +9,32 @@ import (
 	"github.com/urfave/cli"
 )
 
+func grantPermissionsCommand() cli.Command {
+	return cli.Command{
+		Name:  "grant-permissions",
+		Usage: "Grant permissions to a user",
+		Flags: []cli.Flag{cli.StringFlag{
+			Name:   "database, d",
+			Usage:  "Database name",
+			EnvVar: "EGGCHAN_DB_NAME",
+		},
+			cli.StringFlag{
+				Name:   "username, u",
+				Usage:  "Database username",
+				EnvVar: "EGGCHAN_DB_USERNAME",
+			},
+			cli.StringFlag{
+				Name:   "password, p",
+				Usage:  "Database password",
+				EnvVar: "EGGCHAN_DB_PASSWORD",
+			},
+		},
+		Action: func(ctx *cli.Context) error {
+			return grantPermissions(ctx)
+		},
+	}
+}
+
 func grantPermissions(ctx *cli.Context) error {
 	connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", ctx.String("database"))
 
