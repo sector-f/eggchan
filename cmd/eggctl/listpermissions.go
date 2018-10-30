@@ -58,7 +58,7 @@ func listPermissions(ctx *cli.Context) error {
 		perms = append(perms, p)
 	}
 
-	fmt.Println("Available permissions:", strings.Join(perms, ", "))
+	fmt.Println(strings.Join(perms, "\n"))
 
 	return nil
 }
