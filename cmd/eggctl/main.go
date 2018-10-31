@@ -13,6 +13,7 @@ func main() {
 	app.Commands = []cli.Command{
 		addUserCommand(),
 		listUsersCommand(),
+		deleteUserCommand(),
 		listPermissionsCommand(),
 		grantPermissionsCommand(),
 		revokePermissionsCommand(),

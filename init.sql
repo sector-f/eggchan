@@ -65,8 +65,8 @@ INSERT INTO permissions (name) VALUES
 
 CREATE TABLE IF NOT EXISTS user_permissions (
 	id SERIAL PRIMARY KEY,
-	user_id INT NOT NULL REFERENCES users,
-	permission INT NOT NULL REFERENCES permissions,
+	user_id INT NOT NULL REFERENCES users ON DELETE CASCADE,
+	permission INT NOT NULL REFERENCES permissions ON DELETE CASCADE,
 	UNIQUE (user_id, permission)
 );
 
