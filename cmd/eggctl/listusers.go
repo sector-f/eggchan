@@ -42,7 +42,7 @@ type user struct {
 
 func listUsers(ctx *cli.Context) error {
 	connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", ctx.String("database"))
-	userList := make(map[string][]string)
+	userList := [][]string{}
 
 	var err error
 	db, err := sql.Open("postgres", connectionString)
@@ -55,23 +55,22 @@ func listUsers(ctx *cli.Context) error {
 		return err
 	}
 
-	users := []string{}
-	for rows.Next() {
+	for i := 0; rows.Next(); i++ {
 		var u string
 		if err := rows.Scan(&u); err != nil {
 			return err
 		}
-		users = append(users, u)
+		userList = append(userList, []string{u})
 	}
 
-	for _, user := range users {
+	for i, user := range userList {
 		rows, err = db.Query(
 			`SELECT name FROM permissions p
 			INNER JOIN user_permissions up ON p.id = up.permission
 			INNER JOIN users u ON u.id = up.user_id
 			WHERE u.username = $1
 			ORDER BY p.id ASC`,
-			user,
+			user[0],
 		)
 		if err != nil {
 			return err
@@ -86,11 +85,15 @@ func listUsers(ctx *cli.Context) error {
 			permissions = append(permissions, p)
 		}
 
-		userList[user] = permissions
+		userList[i] = append(userList[i], permissions...)
 	}
 
-	for k, v := range userList {
-		fmt.Printf("%s: %s\n", k, strings.Join(v, " "))
+	for _, user := range userList {
+		if len(user) > 1 {
+			fmt.Printf("%s: %s\n", user[0], strings.Join(user[1:], " "))
+		} else {
+			fmt.Printf("%s:\n", user[0])
+		}
 	}
 
 	return nil
