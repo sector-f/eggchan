@@ -14,6 +14,7 @@ func main() {
 		addUserCommand(),
 		listUsersCommand(),
 		deleteUserCommand(),
+		listBoardsCommand(),
 		listPermissionsCommand(),
 		grantPermissionsCommand(),
 		revokePermissionsCommand(),
