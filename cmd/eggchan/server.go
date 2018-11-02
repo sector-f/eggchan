@@ -11,9 +11,11 @@ import (
 )
 
 type Route struct {
-	Method      string
-	Pattern     string
-	HandlerFunc http.HandlerFunc
+	Method       string
+	Pattern      string
+	HandlerFunc  http.HandlerFunc
+	AuthRequired bool
+	Permission   string
 }
 
 type Routes []Route
@@ -33,63 +35,40 @@ func (a *Server) Initialize(user, password, dbname string) {
 	}
 
 	var routes = Routes{
-		Route{
-			"GET",
-			"/categories",
-			a.getCategories,
-		},
-		Route{
-			"GET",
-			"/categories/{category}",
-			a.showCategory,
-		},
-		Route{
-			"GET",
-			"/boards",
-			a.getBoards,
-		},
-		Route{
-			"GET",
-			"/boards/{board}",
-			a.showBoard,
-		},
-		Route{
-			"POST",
-			"/boards/{board}",
-			a.postThread,
-		},
-		Route{
-			"POST",
-			"/boards/{board}/{thread}",
-			a.postReply,
-		},
-		Route{
-			"GET",
-			"/boards/{board}/{thread}",
-			a.showThread,
-		},
+		Route{"GET", "/categories", a.getCategories, false, ""},
+		Route{"GET", "/categories/{category}", a.showCategory, false, ""},
+
+		Route{"GET", "/boards", a.getBoards, false, ""},
+		Route{"GET", "/boards/{board}", a.showBoard, false, ""},
+		Route{"POST", "/boards/{board}", a.postThread, false, ""},
+
+		Route{"GET", "/boards/{board}/{thread}", a.showThread, false, ""},
+		Route{"POST", "/boards/{board}/{thread}", a.postReply, false, ""},
+
+		Route{"DELETE", "/boards/{board}/threads/{thread}", a.deleteThread, true, "delete_thread"},
+		Route{"DELETE", "/boards/{board}/comments/{comment}", a.deleteComment, true, "delete_post"},
 	}
 
-	router := mux.NewRouter()
+	router := mux.NewRouter().StrictSlash(true)
 	router.NotFoundHandler = http.HandlerFunc(handleNotFound)
 
 	for _, route := range routes {
 		var handler http.Handler
 		handler = route.HandlerFunc
+
+		if route.AuthRequired {
+			handler = a.auth(handler, route.Permission)
+		}
+
 		handler = Logger(handler)
-
-		router.
-			Methods(route.Method).
-			Path(route.Pattern).
-			Handler(handler)
-
-		router.
-			Methods(route.Method).
-			Path(route.Pattern + "/").
-			Handler(handler)
+		router.Methods(route.Method).Path(route.Pattern).Handler(handler)
 	}
 
 	a.Router = router
+}
+
+type SuccessMessage struct {
+	Message string `json:"message"`
 }
 
 func (a *Server) Run(addr string) {

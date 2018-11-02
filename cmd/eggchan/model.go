@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/guregu/null.v3"
 	"time"
 )
@@ -314,4 +315,74 @@ func checkIsOp(db *sql.DB, board string, thread int) (bool, error) {
 	} else {
 		return true, nil
 	}
+}
+
+func getUserAuthentication(db *sql.DB, name string, pw []byte) (bool, error) {
+	pw_row := db.QueryRow(`SELECT password FROM users WHERE username = $1`, name)
+	var db_pw []byte
+	if err := pw_row.Scan(&db_pw); err != nil {
+		return false, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword(db_pw, pw); err != nil {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
+
+func getUserAuthorization(db *sql.DB, name string, perm string) (bool, error) {
+	row := db.QueryRow(
+		`SELECT COUNT(*) FROM user_permissions
+		WHERE user_id = (SELECT id FROM users WHERE username = $1)
+		AND permission = (SELECT id FROM permissions WHERE name = $2)`,
+		name,
+		perm,
+	)
+
+	var count int
+	if err := row.Scan(&count); err != nil {
+		return false, err
+	}
+
+	if count > 0 {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+func deleteThreadInDB(db *sql.DB, board string, thread int) (int64, error) {
+	result, err := db.Exec(
+		`DELETE FROM threads
+		WHERE board_id = (SELECT id FROM boards WHERE name = $1)
+		AND post_num = $2`,
+		board,
+		thread,
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	count, _ := result.RowsAffected()
+	return count, nil
+}
+
+func deleteCommentInDB(db *sql.DB, board string, comment int) (int64, error) {
+	result, err := db.Exec(
+		`DELETE FROM comments
+		USING threads
+		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		AND comments.post_num = $2`,
+		board,
+		comment,
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	count, _ := result.RowsAffected()
+	return count, nil
 }
