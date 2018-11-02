@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE TABLE IF NOT EXISTS categories (
 	id SERIAL PRIMARY KEY,
 	name TEXT UNIQUE NOT NULL
@@ -49,7 +51,7 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE TABLE IF NOT EXISTS users (
 	id SERIAL PRIMARY KEY,
 	username TEXT UNIQUE NOT NULL,
-	password TEXT NOT NULL,
+	password TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS permissions (
@@ -214,3 +216,5 @@ CREATE TRIGGER update_postnum_table
 /* CREATE VIEW replies AS */
 /* 	SELECT * FROM posts_view */
 /* 	WHERE reply_to IS NOT NULL; */
+
+COMMIT;
