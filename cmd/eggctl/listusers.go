@@ -13,11 +13,12 @@ func listUsersCommand() cli.Command {
 	return cli.Command{
 		Name:  "list-users",
 		Usage: "List users in the database",
-		Flags: []cli.Flag{cli.StringFlag{
-			Name:   "database, d",
-			Usage:  "Database name",
-			EnvVar: "EGGCHAN_DB_NAME",
-		},
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:   "database, d",
+				Usage:  "Database name",
+				EnvVar: "EGGCHAN_DB_NAME",
+			},
 			cli.StringFlag{
 				Name:   "username, u",
 				Usage:  "Database username",

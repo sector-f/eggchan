@@ -13,11 +13,12 @@ func revokePermissionsCommand() cli.Command {
 	return cli.Command{
 		Name:  "revoke-permissions",
 		Usage: "Revoke permissions from a user",
-		Flags: []cli.Flag{cli.StringFlag{
-			Name:   "database, d",
-			Usage:  "Database name",
-			EnvVar: "EGGCHAN_DB_NAME",
-		},
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:   "database, d",
+				Usage:  "Database name",
+				EnvVar: "EGGCHAN_DB_NAME",
+			},
 			cli.StringFlag{
 				Name:   "username, u",
 				Usage:  "Database username",
