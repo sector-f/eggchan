@@ -105,28 +105,26 @@ func runCommand(db *sql.DB, arguments []string) (break_loop bool) {
 		return false
 	}
 
+	var command *cobra.Command
+
 	switch arguments[0] {
 	case "add-user":
-		command := addUserCommand(db)
-		command.SetArgs(arguments[1:])
-		command.Execute()
+		command = addUserCommand(db)
 	case "list-users":
-		command := listUsersCommand(db)
-		command.SetArgs(arguments[1:])
-		command.Execute()
+		command = listUsersCommand(db)
 	case "add-board":
-		command := addBoardCommand(db)
-		command.SetArgs(arguments[1:])
-		command.Execute()
+		command = addBoardCommand(db)
 	case "list-boards":
-		command := listBoardsCommand(db)
-		command.SetArgs(arguments[1:])
-		command.Execute()
+		command = listBoardsCommand(db)
 	case "exit":
 		return true
 	default:
 		fmt.Printf("Error: Unknown command \"%s\"\n", arguments[0])
+		return false
 	}
+
+	command.SetArgs(arguments[1:])
+	command.Execute()
 
 	return false
 }
