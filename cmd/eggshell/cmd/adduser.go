@@ -12,7 +12,7 @@ import (
 )
 
 func addUserCommand(db *sql.DB) *cobra.Command {
-	return &cobra.Command{
+	command := cobra.Command{
 		Use:           "add-user",
 		Short:         "Add user to the Eggchan database",
 		SilenceErrors: false,
@@ -34,6 +34,12 @@ func addUserCommand(db *sql.DB) *cobra.Command {
 			return nil
 		},
 	}
+
+	command.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		fmt.Println("Usage: add-user USERNAME")
+	})
+
+	return &command
 }
 
 func addUserToDB(db *sql.DB, user string) error {

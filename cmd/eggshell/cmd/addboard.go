@@ -41,6 +41,9 @@ func addBoardCommand(db *sql.DB) *cobra.Command {
 
 	command.Flags().StringVarP(&Description, "description", "d", "", "Board description")
 	command.Flags().StringVarP(&Category, "category", "c", "", "Board category")
+	command.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		fmt.Println("Usage: add-board [--description DESCRIPTION] [--category CATEGORY] BOARDNAME")
+	})
 
 	return command
 }
