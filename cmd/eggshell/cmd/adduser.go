@@ -13,7 +13,7 @@ import (
 
 func addUserCommand(db *sql.DB) *cobra.Command {
 	return &cobra.Command{
-		Use:           "addUser",
+		Use:           "add-user",
 		Short:         "Add user to the Eggchan database",
 		SilenceErrors: false,
 		SilenceUsage:  true,
