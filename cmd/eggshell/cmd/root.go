@@ -22,7 +22,7 @@ var Egg bool
 // Readline tab completion
 var completer = readline.NewPrefixCompleter(
 	readline.PcItem("add-user"),
-	readline.PcItem("add-board", readline.PcItem("--description"), readline.PcItem("--category")),
+	readline.PcItem("add-board"),
 	readline.PcItem("exit"),
 )
 

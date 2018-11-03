@@ -39,8 +39,8 @@ func addBoardCommand(db *sql.DB) *cobra.Command {
 		},
 	}
 
-	command.Flags().StringVar(&Description, "description", "", "Board description")
-	command.Flags().StringVar(&Category, "category", "", "Board category")
+	command.Flags().StringVarP(&Description, "description", "d", "", "Board description")
+	command.Flags().StringVarP(&Category, "category", "c", "", "Board category")
 
 	return command
 }
