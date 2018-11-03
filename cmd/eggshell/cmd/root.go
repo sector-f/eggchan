@@ -1,0 +1,124 @@
+package cmd
+
+import (
+	"database/sql"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	"github.com/chzyer/readline"
+	shellquote "github.com/kballard/go-shellquote"
+	_ "github.com/lib/pq"
+	"github.com/spf13/cobra"
+)
+
+// Cobra global variables
+var Database string
+var Username string
+var Password string
+var Egg bool
+
+// Readline tab completion
+var completer = readline.NewPrefixCompleter(
+	readline.PcItem("addUser"),
+	readline.PcItem("exit"),
+)
+
+func init() {
+	rootCmd.PersistentFlags().StringVar(&Database, "database", "eggchan", "Database name")
+	rootCmd.PersistentFlags().StringVar(&Username, "username", "eggchan", "Database username")
+	rootCmd.PersistentFlags().StringVar(&Password, "password", "", "Database password")
+	rootCmd.PersistentFlags().BoolVar(&Egg, "egg", false, "Enable egg")
+
+	rootCmd.PersistentFlags().MarkHidden("egg")
+}
+
+var rootCmd = &cobra.Command{
+	Use:   "eggshell",
+	Short: "Command-line interface to the Eggchan database",
+	Run: func(cmd *cobra.Command, args []string) {
+		connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", cmd.Flag("database").Value.String())
+		var err error
+		db, err := sql.Open("postgres", connectionString)
+		if err != nil {
+			fmt.Printf("Error establishing database connection: %s\n", err)
+			return
+		}
+
+		err = db.Ping()
+		if err != nil {
+			fmt.Printf("Error establishing database connection: %s\n", err)
+			return
+		}
+
+		var prompt string
+		if egg, _ := cmd.Flags().GetBool("egg"); egg {
+			prompt = "🥚 "
+		} else {
+			prompt = "> "
+		}
+
+		l, err := readline.NewEx(&readline.Config{
+			Prompt:          prompt,
+			AutoComplete:    completer,
+			InterruptPrompt: "^C",
+			EOFPrompt:       "exit",
+		})
+		if err != nil {
+			panic(err)
+		}
+		defer l.Close()
+
+	repl:
+		for {
+			line, err := l.Readline()
+			if err == readline.ErrInterrupt {
+				if len(line) == 0 {
+					break
+				} else {
+					continue
+				}
+			} else if err == io.EOF {
+				break
+			}
+
+			arguments, err := shellquote.Split(strings.TrimSpace(line))
+			if err != nil {
+				fmt.Printf("Syntax error: %s\n", err)
+				continue
+			} else {
+				if runCommand(db, arguments) {
+					break repl
+				}
+			}
+		}
+
+	},
+}
+
+func runCommand(db *sql.DB, arguments []string) (break_loop bool) {
+	if len(arguments) == 0 {
+		return false
+	}
+
+	switch arguments[0] {
+	case "addUser":
+		command := addUserCommand(db)
+		command.SetArgs(arguments[1:])
+		command.Execute()
+	case "exit":
+		return true
+	default:
+		fmt.Printf("Error: Unknown command \"%s\"\n", arguments[0])
+	}
+
+	return false
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
