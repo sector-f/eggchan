@@ -22,6 +22,7 @@ var Egg bool
 // Readline tab completion
 var completer = readline.NewPrefixCompleter(
 	readline.PcItem("add-user"),
+	readline.PcItem("delete-user"),
 	readline.PcItem("list-users"),
 	readline.PcItem("add-board"),
 	readline.PcItem("list-boards"),
@@ -110,6 +111,8 @@ func runCommand(db *sql.DB, arguments []string) (break_loop bool) {
 	switch arguments[0] {
 	case "add-user":
 		command = addUserCommand(db)
+	case "delete-user":
+		command = deleteUserCommand(db)
 	case "list-users":
 		command = listUsersCommand(db)
 	case "add-board":
