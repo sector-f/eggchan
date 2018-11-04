@@ -24,6 +24,7 @@ var completer = readline.NewPrefixCompleter(
 	readline.PcItem("add-user"),
 	readline.PcItem("delete-user"),
 	readline.PcItem("list-users"),
+	readline.PcItem("grant-permissions"),
 	readline.PcItem("add-board"),
 	readline.PcItem("list-boards"),
 	readline.PcItem("exit"),
@@ -115,6 +116,8 @@ func runCommand(db *sql.DB, arguments []string) (break_loop bool) {
 		command = deleteUserCommand(db)
 	case "list-users":
 		command = listUsersCommand(db)
+	case "grant-permissions":
+		command = grantPermissionsCommand(db)
 	case "add-board":
 		command = addBoardCommand(db)
 	case "list-boards":
