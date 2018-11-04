@@ -21,9 +21,7 @@ func grantPermissionsCommand(db *sql.DB) *cobra.Command {
 			username := args[len(args)-1]
 
 			if username != "" {
-				if err := grantPermissions(db, permissions, username); err != nil {
-					return err
-				}
+				grantPermissions(db, permissions, username)
 			} else {
 				return errors.New("Username cannot be empty")
 			}

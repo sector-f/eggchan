@@ -51,7 +51,6 @@ func deleteUser(db *sql.DB, user string) error {
 	}
 
 	affected, _ := result.RowsAffected()
-
 	if affected != 1 {
 		return errors.New("User not found")
 	}
