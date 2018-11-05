@@ -90,9 +90,8 @@ type thread struct {
 	Author          string      `json:"author"`
 	Time            time.Time   `json:"post_time"`
 	NumReplies      int         `json:"num_replies"`
-	LatestReply     null.Time   `json:"latest_reply_time"`
+	SortLatestReply time.Time   `json:"latest_reply_time"` // Time of latest reply, or OP time if no replies
 	Comment         string      `json:"comment"`
-	SortLatestReply time.Time   `json:"-"`
 }
 
 type post struct {
@@ -124,13 +123,12 @@ func showBoardFromDB(db *sql.DB, name string) (boardReply, error) {
 			threads.author,
 			threads.time,
 			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) AS num_replies,
-			MAX(comments.time) AS latest_reply,
-			threads.comment,
 			CASE
 				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= (SELECT bump_limit FROM boards WHERE name = $1)  THEN (SELECT comments.time FROM comments OFFSET (SELECT bump_limit FROM boards WHERE name = $1) LIMIT 1)
 				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
 				ELSE MAX(threads.time)
-			END AS sort_latest_reply
+			END AS sort_latest_reply,
+			threads.comment
 		FROM threads
 		LEFT JOIN comments ON threads.id = comments.reply_to
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
@@ -147,7 +145,7 @@ func showBoardFromDB(db *sql.DB, name string) (boardReply, error) {
 	threads := []thread{}
 	for rows.Next() {
 		var t thread
-		if err := rows.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
+		if err := rows.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
 			return reply, err
 		}
 		threads = append(threads, t)
@@ -172,13 +170,12 @@ func showThreadFromDB(db *sql.DB, board string, thread_num int) (threadReply, er
 			threads.author,
 			threads.time,
 			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) AS num_replies,
-			MAX(comments.time) AS latest_reply,
-			threads.comment,
 			CASE
 				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= (SELECT bump_limit FROM boards WHERE name = $1)  THEN (SELECT comments.time FROM comments OFFSET (SELECT bump_limit FROM boards WHERE name = $1) LIMIT 1)
 				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
 				ELSE MAX(threads.time)
-			END AS sort_latest_reply
+			END AS sort_latest_reply,
+			threads.comment
 		FROM threads
 		LEFT JOIN comments ON threads.id = comments.reply_to
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
@@ -190,7 +187,7 @@ func showThreadFromDB(db *sql.DB, board string, thread_num int) (threadReply, er
 	)
 
 	var t thread
-	if err := t_row.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.LatestReply, &t.Comment, &t.SortLatestReply); err != nil {
+	if err := t_row.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
 		return reply, err
 	}
 
