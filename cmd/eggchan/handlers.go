@@ -89,7 +89,7 @@ func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := r.FormValue("name")
+	name := r.FormValue("author")
 	if name == "" {
 		name = "Anonymous"
 	}
