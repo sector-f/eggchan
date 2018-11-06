@@ -133,7 +133,7 @@ func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := strings.TrimSpace(r.FormValue("name"))
+	name := strings.TrimSpace(r.FormValue("author"))
 	if name == "" {
 		name = "Anonymous"
 	}
