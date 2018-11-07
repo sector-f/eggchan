@@ -82,6 +82,13 @@ func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
+	r.Body = http.MaxBytesReader(w, r.Body, 2000*1024)
+	err := r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		respondWithError(w, http.StatusRequestEntityTooLarge, "Comment exceeds length limit")
+		return
+	}
+
 	r.ParseMultipartForm(32 << 20)
 	comment := r.FormValue("comment")
 	if comment == "" {
@@ -126,7 +133,13 @@ func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseMultipartForm(32 << 20)
+	r.Body = http.MaxBytesReader(w, r.Body, 2000*1024)
+	err = r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		respondWithError(w, http.StatusRequestEntityTooLarge, "Comment exceeds length limit")
+		return
+	}
+
 	comment := r.FormValue("comment")
 	if comment == "" {
 		respondWithError(w, http.StatusBadRequest, "Comment cannot be empty")
