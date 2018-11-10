@@ -1,4 +1,4 @@
-package root
+package eggchan
 
 import (
 	"time"
@@ -7,18 +7,25 @@ import (
 )
 
 type EggchanService interface {
-	Categories() ([]Category, error)
+	ListCategories() ([]Category, error)
+	ShowCategory(name string) ([]Board, error)
 	ListBoards() ([]Board, error)
-	ListThreads(board string) ([]Thread, error)
-	GetThread(board string, id int) (ThreadReply, error)
+	ShowBoard(board string) (BoardReply, error)
+	ShowThread(board string, id int) (ThreadReply, error)
+	MakeThread(board, comment, author subject string) (int, error)
+	MakeComment(board string, thread int, comment string, author string)
+}
 
+type AdminService interface {
 	AddUser(user string) error
 	DeleteUser(user string) error
 	ListUsers() ([]User, error)
 	GrantPermissions(user string, perms []Permission) error
 	RevokePermissions(user string, perms []Permission) error
-	ListPermissions()  ([]Permission, error)
+	ListPermissions() ([]Permission, error)
 	AddBoard(board, description, category string) error
+	DeleteThread(board string, thread int) (int64, error)
+	DeleteComment(board string, thread int) (int64, error)
 }
 
 type Category struct {

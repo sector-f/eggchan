@@ -1,18 +1,20 @@
-package main
+package postgres
 
 import (
 	"database/sql"
+	"time"
+
+	"github.com/sector-f/eggchan"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/guregu/null.v3"
-	"time"
 )
 
-type category struct {
-	Name string `json:"name"`
+type EggchanService struct {
+	DB *sql.DB
 }
 
-func getCategoriesFromDB(db *sql.DB) ([]category, error) {
-	rows, err := db.Query("SELECT name FROM categories ORDER BY name ASC")
+func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
+	rows, err := s.db.Query("SELECT name FROM categories ORDER BY name ASC")
 
 	if err != nil {
 		return nil, err
@@ -20,9 +22,9 @@ func getCategoriesFromDB(db *sql.DB) ([]category, error) {
 
 	defer rows.Close()
 
-	categories := []category{}
+	categories := []eggchan.Category{}
 	for rows.Next() {
-		var c category
+		var c eggchan.Category
 		if err := rows.Scan(&c.Name); err != nil {
 			return nil, err
 		}
@@ -32,14 +34,8 @@ func getCategoriesFromDB(db *sql.DB) ([]category, error) {
 	return categories, nil
 }
 
-type board struct {
-	Name        string      `json:"name"`
-	Description null.String `json:"description"`
-	Category    null.String `json:"category"`
-}
-
-func getBoardsFromDB(db *sql.DB) ([]board, error) {
-	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id ORDER BY boards.name ASC")
+func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
+	rows, err := s.db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id ORDER BY boards.name ASC")
 
 	if err != nil {
 		return nil, err
@@ -47,9 +43,9 @@ func getBoardsFromDB(db *sql.DB) ([]board, error) {
 
 	defer rows.Close()
 
-	boards := []board{}
+	boards := []eggchan.Board{}
 	for rows.Next() {
-		var b board
+		var b eggchan.Board
 		if err := rows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
 			return nil, err
 		}
@@ -59,17 +55,17 @@ func getBoardsFromDB(db *sql.DB) ([]board, error) {
 	return boards, nil
 }
 
-func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
-	rows, err := db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1 ORDER BY boards.name ASC", name)
+func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
+	rows, err := s.db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1 ORDER BY boards.name ASC", name)
 	if err != nil {
 		return nil, err
 	}
 
 	defer rows.Close()
 
-	boards := []board{}
+	boards := []eggchan.Board{}
 	for rows.Next() {
-		var b board
+		var b eggchan.Board
 		if err := rows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
 			return nil, err
 		}
@@ -79,44 +75,22 @@ func showCategoryFromDB(db *sql.DB, name string) ([]board, error) {
 	return boards, nil
 }
 
-type boardReply struct {
-	Board   board    `json:"board"`
-	Threads []thread `json:"threads"`
-}
+func (s *EggchanService) ShowBoard(name string) (eggchan.BoardReply, error) {
+	var reply eggchan.BoardReply
 
-type thread struct {
-	PostNum         int         `json:"post_num"`
-	Subject         null.String `json:"subject"`
-	Author          string      `json:"author"`
-	Time            time.Time   `json:"post_time"`
-	NumReplies      int         `json:"num_replies"`
-	SortLatestReply time.Time   `json:"latest_reply_time"` // Time of latest reply, or OP time if no replies
-	Comment         string      `json:"comment"`
-}
-
-type post struct {
-	PostNum int       `json:"post_num"`
-	Author  string    `json:"author"`
-	Time    time.Time `json:"time"`
-	Comment string    `json:"comment"`
-}
-
-func showBoardFromDB(db *sql.DB, name string) (boardReply, error) {
-	var reply boardReply
-
-	b_row := db.QueryRow(
+	b_row := s.db.QueryRow(
 		`SELECT boards.name, boards.description, boards.category
 		FROM boards
 		WHERE boards.name = $1`,
 		name,
 	)
 
-	var b board
+	var b eggchan.Board
 	if err := b_row.Scan(&b.Name, &b.Description, &b.Category); err != nil {
 		return reply, err
 	}
 
-	rows, err := db.Query(
+	rows, err := s.db.Query(
 		`SELECT
 			threads.post_num,
 			threads.subject,
@@ -142,28 +116,23 @@ func showBoardFromDB(db *sql.DB, name string) (boardReply, error) {
 	}
 	defer rows.Close()
 
-	threads := []thread{}
+	threads := []eggchan.Thread{}
 	for rows.Next() {
-		var t thread
+		var t eggchan.Thread
 		if err := rows.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
 			return reply, err
 		}
 		threads = append(threads, t)
 	}
 
-	reply = boardReply{b, threads}
+	reply = eggchan.BoardReply{b, threads}
 	return reply, nil
 }
 
-type threadReply struct {
-	Thread thread `json:"op"`
-	Posts  []post `json:"posts"`
-}
+func (s *EggchanService) ShowThread(board string, thread_num int) (eggchan.ThreadReply, error) {
+	var reply eggchan.ThreadReply
 
-func showThreadFromDB(db *sql.DB, board string, thread_num int) (threadReply, error) {
-	var reply threadReply
-
-	t_row := db.QueryRow(
+	t_row := s.db.QueryRow(
 		`SELECT
 			threads.post_num,
 			threads.subject,
@@ -186,12 +155,12 @@ func showThreadFromDB(db *sql.DB, board string, thread_num int) (threadReply, er
 		thread_num,
 	)
 
-	var t thread
+	var t eggchan.Thread
 	if err := t_row.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
 		return reply, err
 	}
 
-	c_rows, err := db.Query(
+	c_rows, err := s.db.Query(
 		`SELECT comments.post_num, comments.author, comments.time, comments.comment
 		FROM comments
 		INNER JOIN threads ON comments.reply_to = threads.id
@@ -207,21 +176,21 @@ func showThreadFromDB(db *sql.DB, board string, thread_num int) (threadReply, er
 	}
 	defer c_rows.Close()
 
-	posts := []post{}
+	posts := []eggchan.Post{}
 	for c_rows.Next() {
-		var p post
+		var p eggchan.Post
 		if err := c_rows.Scan(&p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
 			return reply, err
 		}
 		posts = append(posts, p)
 	}
 
-	reply = threadReply{t, posts}
+	reply = eggchan.ThreadReply{t, posts}
 	return reply, nil
 }
 
-func makeThreadInDB(db *sql.DB, board string, comment string, author string, subject string) (int, error) {
-	rows, err := db.Query(
+func (s *EggchanService) MakeThread(board string, comment string, author string, subject string) (int, error) {
+	rows, err := s.db.Query(
 		`INSERT INTO threads (board_id, comment, author, subject)
 		VALUES(
 			(SELECT id FROM boards WHERE name = $1),
@@ -252,8 +221,9 @@ func makeThreadInDB(db *sql.DB, board string, comment string, author string, sub
 	return post_nums[0], nil
 }
 
-func makePostInDB(db *sql.DB, board string, thread int, comment string, author string) (int, error) {
-	rows, err := db.Query(
+func (s *EggchanService) makePostInDB(board string, thread int, comment string, author string) (int, error) {
+	// TODO: use QueryRow here
+	rows, err := s.db.Query(
 		`INSERT INTO comments (reply_to, comment, author)
 		VALUES(
 			(SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2),
@@ -283,8 +253,8 @@ func makePostInDB(db *sql.DB, board string, thread int, comment string, author s
 	return post_nums[0], nil
 }
 
-func checkIsOp(db *sql.DB, board string, thread int) (bool, error) {
-	rows, err := db.Query(
+func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
+	rows, err := s.db.Query(
 		`SELECT post_num
 		FROM threads
 		INNER JOIN boards ON threads.board_id = boards.id
@@ -298,9 +268,9 @@ func checkIsOp(db *sql.DB, board string, thread int) (bool, error) {
 		return false, err
 	}
 
-	posts := []post{}
+	posts := []eggchan.Post{}
 	for rows.Next() {
-		var p post
+		var p eggchan.Post
 		if err := rows.Scan(&p.PostNum); err != nil {
 			return false, err
 		}
@@ -314,8 +284,8 @@ func checkIsOp(db *sql.DB, board string, thread int) (bool, error) {
 	}
 }
 
-func getUserAuthentication(db *sql.DB, name string, pw []byte) (bool, error) {
-	pw_row := db.QueryRow(`SELECT password FROM users WHERE username = $1`, name)
+func (s *EggchanService) getUserAuthentication(name string, pw []byte) (bool, error) {
+	pw_row := s.db.QueryRow(`SELECT password FROM users WHERE username = $1`, name)
 	var db_pw []byte
 	if err := pw_row.Scan(&db_pw); err != nil {
 		return false, err
@@ -328,8 +298,8 @@ func getUserAuthentication(db *sql.DB, name string, pw []byte) (bool, error) {
 	}
 }
 
-func getUserAuthorization(db *sql.DB, name string, perm string) (bool, error) {
-	row := db.QueryRow(
+func (s *EggchanService) getUserAuthorization(name string, perm string) (bool, error) {
+	row := s.db.QueryRow(
 		`SELECT COUNT(*) FROM user_permissions
 		WHERE user_id = (SELECT id FROM users WHERE username = $1)
 		AND permission = (SELECT id FROM permissions WHERE name = $2)`,
@@ -349,8 +319,8 @@ func getUserAuthorization(db *sql.DB, name string, perm string) (bool, error) {
 	}
 }
 
-func deleteThreadInDB(db *sql.DB, board string, thread int) (int64, error) {
-	result, err := db.Exec(
+func (s *EggchanService) DeleteThread(board string, thread int) (int64, error) {
+	result, err := s.db.Exec(
 		`DELETE FROM threads
 		WHERE board_id = (SELECT id FROM boards WHERE name = $1)
 		AND post_num = $2`,
@@ -366,8 +336,8 @@ func deleteThreadInDB(db *sql.DB, board string, thread int) (int64, error) {
 	return count, nil
 }
 
-func deleteCommentInDB(db *sql.DB, board string, comment int) (int64, error) {
-	result, err := db.Exec(
+func (s *EggchanService) DeleteComment(board string, comment int) (int64, error) {
+	result, err := s.db.Exec(
 		`DELETE FROM comments
 		USING threads
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
