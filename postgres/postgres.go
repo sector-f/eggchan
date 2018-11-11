@@ -10,7 +10,7 @@ import (
 )
 
 type EggchanService struct {
-	DB *sql.DB
+	db *sql.DB
 }
 
 func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
@@ -352,4 +352,160 @@ func (s *EggchanService) DeleteComment(board string, comment int) (int64, error)
 
 	count, _ := result.RowsAffected()
 	return count, nil
+}
+
+func (s *EggchanService) AddUser(user, password string) error {
+	_, err = s.db.Exec(
+		`INSERT INTO users (username, password) VALUES ($1, $2)`,
+		user,
+		password,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *EggchanService) DeleteUser(user string) error {
+	result, err := s.db.Exec(
+		`DELETE FROM users WHERE username = $1`,
+		user,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	affected, _ := result.RowsAffected()
+	if affected != 1 {
+		return errors.New("User not found")
+	}
+
+	return nil
+}
+
+func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
+	userList := []eggchan.User{}
+
+	rows, err := db.Query(`SELECT username FROM users ORDER BY id ASC`)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; rows.Next(); i++ {
+		var u string
+		if err := rows.Scan(&u); err != nil {
+			return userList, err
+		}
+		userList = append(userList, eggchan.User{u, []string{}})
+	}
+
+	for _, user := range userList {
+		rows, err = db.Query(
+			`SELECT name FROM permissions p
+			INNER JOIN user_permissions up ON p.id = up.permission
+			INNER JOIN users u ON u.id = up.user_id
+			WHERE u.username = $1
+			ORDER BY p.id ASC`,
+			user.Name,
+		)
+		if err != nil {
+			return userList, err
+		}
+
+		permissions := []string{}
+		for rows.Next() {
+			var p string
+			if err := rows.Scan(&p); err != nil {
+				return err
+			}
+			permissions = append(permissions, p)
+		}
+
+		user.Perms = permissions
+	}
+}
+
+func (s *EggchanService) GrantPermissions(user string, perms []eggchan.Permission) error {
+	for _, perm := range permissions {
+		_, err := s.db.Exec(
+			`INSERT INTO user_permissions (user_id, permission) VALUES
+			((SELECT id FROM users WHERE username = $1), (SELECT id FROM permissions WHERE name = $2))`,
+			user,
+			perm,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *EggchanService) RevokePermissions(user string, perms []eggchan.Permission) error {
+	for _, perm := range permissions {
+		result, err := db.Exec(
+			`DELETE FROM user_permissions
+			WHERE user_id = (SELECT id FROM users WHERE username = $1)
+			AND permission = (SELECT id FROM permissions WHERE name = $2)`,
+			user,
+			perm,
+		)
+
+		// TODO: figure out a better way to do this
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *EggchanService) ListPermissions() ([]eggchan.Permission, error) {
+	perms := []eggchan.Permission{}
+	rows, err := s.db.Query(`SELECT name FROM permissions ORDER BY id ASC`)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; rows.Next(); i++
+		var n string
+		if err := rows.Scan(&n), err != nil {
+			return err
+		}
+		perms = append(perms, eggchan.Permission{n}
+	}
+
+	return perms, nil
+}
+
+func (s *EggchanService) AddBoard(board, description, category string) error {
+	if description == "" {
+		d = sql.NullString{"", false}
+	} else {
+		d = sql.NullString{description, true}
+	}
+
+	var c sql.NullString
+	if category == "" {
+		c = sql.NullString{"", false}
+	} else {
+		c = sql.NullString{category, true}
+	}
+
+	_, err := s.db.Exec(
+		`INSERT INTO boards (name, description, category) VALUES ($1, $2, (SELECT id FROM categories WHERE name = $3))`,
+		board,
+		description,
+		category,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
