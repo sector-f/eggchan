@@ -13,7 +13,7 @@ type BoardService interface {
 	ShowBoard(board string) (BoardReply, error)
 	ShowThread(board string, id int) (ThreadReply, error)
 	MakeThread(board, comment, author, subject string) (int, error)
-	MakeComment(board string, thread int, comment string, author string)
+	MakeComment(board string, thread int, comment string, author string) (int, error)
 }
 
 type AdminService interface {

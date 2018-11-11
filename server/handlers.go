@@ -13,7 +13,7 @@ func handleNotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *HttpServer) getCategories(w http.ResponseWriter, r *http.Request) {
-	categories, err := e.EggchanService.ListCategories()
+	categories, err := e.BoardService.ListCategories()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -26,7 +26,7 @@ func (e *HttpServer) showCategory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["category"]
 
-	boards, err := e.EggchanService.ShowCategory(name)
+	boards, err := e.BoardService.ShowCategory(name)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid category")
 		return
@@ -39,7 +39,7 @@ func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["board"]
 
-	posts, err := e.EggchanService.ShowBoard(name)
+	posts, err := e.BoardService.ShowBoard(name)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid board")
 		return
@@ -58,7 +58,7 @@ func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := e.EggchanService.ShowThread(board, thread)
+	posts, err := e.BoardService.ShowThread(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
 		return
@@ -68,7 +68,7 @@ func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
-	boards, err := e.EggchanService.ListBoards()
+	boards, err := e.BoardService.ListBoards()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -102,7 +102,7 @@ func (e *HttpServer) postThread(w http.ResponseWriter, r *http.Request) {
 
 	subject := r.FormValue("subject")
 
-	post_num, err := e.EggchanService.MakeThread(board, comment, author, subject)
+	post_num, err := e.BoardService.MakeThread(board, comment, author, subject)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Error creating thread")
 		return
@@ -150,7 +150,7 @@ func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
 		author = "Anonymous"
 	}
 
-	post_num, err := e.EggchanService.MakeComment(board, thread, comment, author)
+	post_num, err := e.BoardService.MakeComment(board, thread, comment, author)
 	if err != nil {
 		if err.(*pq.Error).Message == "Thread has reached post limit" {
 			respondWithError(w, http.StatusForbidden, "Thread has reached post limit")
@@ -173,7 +173,7 @@ func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted_count, err := e.EggchanService.DeleteThread(board, thread)
+	deleted_count, err := e.AdminService.DeleteThread(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not delete thread")
 		return
@@ -199,7 +199,7 @@ func (e *HttpServer) deleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted_count, err := e.EggchanService.DeleteComment(board, thread)
+	deleted_count, err := e.AdminService.DeleteComment(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not delete comment")
 		return

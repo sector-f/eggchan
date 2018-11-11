@@ -1,8 +1,6 @@
 package server
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -11,8 +9,10 @@ import (
 )
 
 type HttpServer struct {
-	Router         *mux.Router
-	EggchanService *eggchan.EggchanService
+	Router       *mux.Router
+	BoardService eggchan.BoardService
+	AdminService eggchan.AdminService
+	AuthService  eggchan.AuthService
 }
 
 type Route struct {
@@ -57,4 +57,8 @@ func (s *HttpServer) Initialize() {
 	}
 
 	s.Router = router
+}
+
+func (s *HttpServer) Run(addr string) {
+	log.Fatal(http.ListenAndServe(addr, s.Router))
 }
