@@ -25,20 +25,20 @@ type Route struct {
 
 type Routes []Route
 
-func New(e *eggchan.EggchanService) HttpServer {
+func (s *HttpServer) Initialize() {
 	var routes = Routes{
-		Route{"GET", "/categories", e.getCategories, false, ""},
-		Route{"GET", "/categories/{category}", e.showCategory, false, ""},
+		Route{"GET", "/categories", s.getCategories, false, ""},
+		Route{"GET", "/categories/{category}", s.showCategory, false, ""},
 
-		Route{"GET", "/boards", e.getBoards, false, ""},
-		Route{"GET", "/boards/{board}", e.showBoard, false, ""},
-		Route{"POST", "/boards/{board}", e.postThread, false, ""},
+		Route{"GET", "/boards", s.getBoards, false, ""},
+		Route{"GET", "/boards/{board}", s.showBoard, false, ""},
+		Route{"POST", "/boards/{board}", s.postThread, false, ""},
 
-		Route{"GET", "/boards/{board}/{thread}", e.showThread, false, ""},
-		Route{"POST", "/boards/{board}/{thread}", e.postReply, false, ""},
+		Route{"GET", "/boards/{board}/{thread}", s.showThread, false, ""},
+		Route{"POST", "/boards/{board}/{thread}", s.postReply, false, ""},
 
-		Route{"DELETE", "/boards/{board}/threads/{thread}", e.deleteThread, true, "delete_thread"},
-		Route{"DELETE", "/boards/{board}/comments/{comment}", e.deleteComment, true, "delete_post"},
+		Route{"DELETE", "/boards/{board}/threads/{thread}", s.deleteThread, true, "delete_thread"},
+		Route{"DELETE", "/boards/{board}/comments/{comment}", s.deleteComment, true, "delete_post"},
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
