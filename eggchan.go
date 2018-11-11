@@ -14,9 +14,7 @@ type EggchanService interface {
 	ShowThread(board string, id int) (ThreadReply, error)
 	MakeThread(board, comment, author, subject string) (int, error)
 	MakeComment(board string, thread int, comment string, author string)
-}
 
-type AdminService interface {
 	AddUser(user string) error
 	DeleteUser(user string) error
 	ListUsers() ([]User, error)

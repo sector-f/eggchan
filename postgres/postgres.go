@@ -221,7 +221,7 @@ func (s *EggchanService) MakeThread(board string, comment string, author string,
 	return post_nums[0], nil
 }
 
-func (s *EggchanService) makePostInDB(board string, thread int, comment string, author string) (int, error) {
+func (s *EggchanService) MakeComment(board string, thread int, comment string, author string) (int, error) {
 	// TODO: use QueryRow here
 	rows, err := s.db.Query(
 		`INSERT INTO comments (reply_to, comment, author)
