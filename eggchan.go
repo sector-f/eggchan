@@ -6,7 +6,7 @@ import (
 	"gopkg.in/guregu/null.v3"
 )
 
-type EggchanService interface {
+type BoardService interface {
 	ListCategories() ([]Category, error)
 	ShowCategory(name string) ([]Board, error)
 	ListBoards() ([]Board, error)
@@ -14,16 +14,22 @@ type EggchanService interface {
 	ShowThread(board string, id int) (ThreadReply, error)
 	MakeThread(board, comment, author, subject string) (int, error)
 	MakeComment(board string, thread int, comment string, author string)
+}
 
-	AddUser(user string) error
-	DeleteUser(user string) error
-	ListUsers() ([]User, error)
-	GrantPermissions(user string, perms []Permission) error
-	RevokePermissions(user string, perms []Permission) error
-	ListPermissions() ([]Permission, error)
+type AdminService interface {
 	AddBoard(board, description, category string) error
 	DeleteThread(board string, thread int) (int64, error)
 	DeleteComment(board string, thread int) (int64, error)
+}
+
+type AuthService interface {
+	AddUser(user string) error
+	DeleteUser(user string) error
+	ListUsers() ([]User, error)
+	CheckPermission(user, permission string) (bool, error)
+	GrantPermissions(user string, perms []Permission) error
+	RevokePermissions(user string, perms []Permission) error
+	ListPermissions() ([]Permission, error)
 }
 
 type Category struct {

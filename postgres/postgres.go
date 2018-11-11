@@ -509,3 +509,24 @@ func (s *EggchanService) AddBoard(board, description, category string) error {
 
 	return nil
 }
+
+func (s *EggchanService) CheckPermission(user, permission string) (bool error) {
+	row := db.QueryRow(
+		`SELECT COUNT(*) from user_permissions
+		WHERE user_id = (SELECT id FROM users WHERE username = $1 LIMIT 1)
+		AND permission = (SELECT id FROM permissions WHERE name = $2 LIMIT 1)`,
+		user,
+		permission,
+	)
+
+	var count int
+	if err := rows.Scan(&count); err != nil {
+		return false, err
+	}
+
+	if count > 0 {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
