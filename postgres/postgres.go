@@ -2,11 +2,10 @@ package postgres
 
 import (
 	"database/sql"
-	"time"
+	"errors"
 
 	"github.com/sector-f/eggchan"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/guregu/null.v3"
 )
 
 type EggchanService struct {
@@ -355,7 +354,7 @@ func (s *EggchanService) DeleteComment(board string, comment int) (int64, error)
 }
 
 func (s *EggchanService) AddUser(user, password string) error {
-	_, err = s.db.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO users (username, password) VALUES ($1, $2)`,
 		user,
 		password,
@@ -389,9 +388,9 @@ func (s *EggchanService) DeleteUser(user string) error {
 func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 	userList := []eggchan.User{}
 
-	rows, err := db.Query(`SELECT username FROM users ORDER BY id ASC`)
+	rows, err := s.db.Query(`SELECT username FROM users ORDER BY id ASC`)
 	if err != nil {
-		return err
+		return userList, err
 	}
 
 	for i := 0; rows.Next(); i++ {
@@ -403,7 +402,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 	}
 
 	for _, user := range userList {
-		rows, err = db.Query(
+		rows, err = s.db.Query(
 			`SELECT name FROM permissions p
 			INNER JOIN user_permissions up ON p.id = up.permission
 			INNER JOIN users u ON u.id = up.user_id
@@ -419,17 +418,19 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 		for rows.Next() {
 			var p string
 			if err := rows.Scan(&p); err != nil {
-				return err
+				return userList, err
 			}
 			permissions = append(permissions, p)
 		}
 
 		user.Perms = permissions
 	}
+
+	return userList, nil
 }
 
 func (s *EggchanService) GrantPermissions(user string, perms []eggchan.Permission) error {
-	for _, perm := range permissions {
+	for _, perm := range perms {
 		_, err := s.db.Exec(
 			`INSERT INTO user_permissions (user_id, permission) VALUES
 			((SELECT id FROM users WHERE username = $1), (SELECT id FROM permissions WHERE name = $2))`,
@@ -446,8 +447,8 @@ func (s *EggchanService) GrantPermissions(user string, perms []eggchan.Permissio
 }
 
 func (s *EggchanService) RevokePermissions(user string, perms []eggchan.Permission) error {
-	for _, perm := range permissions {
-		result, err := db.Exec(
+	for _, perm := range perms {
+		_, err := s.db.Exec(
 			`DELETE FROM user_permissions
 			WHERE user_id = (SELECT id FROM users WHERE username = $1)
 			AND permission = (SELECT id FROM permissions WHERE name = $2)`,
@@ -468,21 +469,22 @@ func (s *EggchanService) ListPermissions() ([]eggchan.Permission, error) {
 	perms := []eggchan.Permission{}
 	rows, err := s.db.Query(`SELECT name FROM permissions ORDER BY id ASC`)
 	if err != nil {
-		return err
+		return perms, err
 	}
 
-	for i := 0; rows.Next(); i++
+	for i := 0; rows.Next(); i++ {
 		var n string
-		if err := rows.Scan(&n), err != nil {
-			return err
+		if err := rows.Scan(&n); err != nil {
+			return perms, err
 		}
-		perms = append(perms, eggchan.Permission{n}
+		perms = append(perms, eggchan.Permission{n})
 	}
 
 	return perms, nil
 }
 
 func (s *EggchanService) AddBoard(board, description, category string) error {
+	var d sql.NullString
 	if description == "" {
 		d = sql.NullString{"", false}
 	} else {
@@ -499,8 +501,8 @@ func (s *EggchanService) AddBoard(board, description, category string) error {
 	_, err := s.db.Exec(
 		`INSERT INTO boards (name, description, category) VALUES ($1, $2, (SELECT id FROM categories WHERE name = $3))`,
 		board,
-		description,
-		category,
+		d,
+		c,
 	)
 
 	if err != nil {
@@ -510,8 +512,8 @@ func (s *EggchanService) AddBoard(board, description, category string) error {
 	return nil
 }
 
-func (s *EggchanService) CheckPermission(user, permission string) (bool error) {
-	row := db.QueryRow(
+func (s *EggchanService) CheckPermission(user, permission string) (bool, error) {
+	row := s.db.QueryRow(
 		`SELECT COUNT(*) from user_permissions
 		WHERE user_id = (SELECT id FROM users WHERE username = $1 LIMIT 1)
 		AND permission = (SELECT id FROM permissions WHERE name = $2 LIMIT 1)`,
@@ -520,7 +522,7 @@ func (s *EggchanService) CheckPermission(user, permission string) (bool error) {
 	)
 
 	var count int
-	if err := rows.Scan(&count); err != nil {
+	if err := row.Scan(&count); err != nil {
 		return false, err
 	}
 
