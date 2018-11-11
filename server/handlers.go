@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 )
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {
@@ -96,8 +97,8 @@ func (e *HttpServer) postThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	author := r.FormValue("author")
-	if name == "" {
-		name = "Anonymous"
+	if author == "" {
+		author = "Anonymous"
 	}
 
 	subject := r.FormValue("subject")
@@ -118,17 +119,6 @@ func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
 	thread, err := strconv.Atoi(vars["thread"])
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Invalid thread ID")
-		return
-	}
-
-	is_op, err := checkIsOp(a.DB, board, thread)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Error")
-		return
-	}
-
-	if !is_op {
-		respondWithError(w, http.StatusBadRequest, "Specified post is not OP")
 		return
 	}
 

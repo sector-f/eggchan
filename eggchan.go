@@ -26,6 +26,7 @@ type AuthService interface {
 	AddUser(user string) error
 	DeleteUser(user string) error
 	ListUsers() ([]User, error)
+	ValidatePassword(user string, password []byte) (bool, error)
 	CheckPermission(user, permission string) (bool, error)
 	GrantPermissions(user string, perms []Permission) error
 	RevokePermissions(user string, perms []Permission) error
