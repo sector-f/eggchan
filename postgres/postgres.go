@@ -512,6 +512,20 @@ func (s *EggchanService) AddBoard(board, description, category string) error {
 	return nil
 }
 
+func (s *EggchanService) ValidatePassword(user string, password []byte) (bool, error) {
+	pw_row := s.db.QueryRow(`SELECT password FROM users WHERE username = $1`, user)
+	var db_pw []byte
+	if err := pw_row.Scan(&db_pw); err != nil {
+		return false, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword(db_pw, password); err != nil {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
+
 func (s *EggchanService) CheckPermission(user, permission string) (bool, error) {
 	row := s.db.QueryRow(
 		`SELECT COUNT(*) from user_permissions
