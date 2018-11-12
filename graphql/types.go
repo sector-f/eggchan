@@ -10,6 +10,7 @@ type Board struct {
 }
 
 type Thread struct {
+	board           string
 	postNum         int
 	subject         string
 	author          string
