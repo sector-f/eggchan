@@ -77,6 +77,7 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 	rows, err := s.DB.Query(
 		`SELECT
+			boards.name,
 			threads.post_num,
 			threads.subject,
 			threads.author,
@@ -90,8 +91,9 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 			threads.comment
 		FROM threads
 		LEFT JOIN comments ON threads.id = comments.reply_to
+		INNER JOIN boards ON threads.board_id = boards.id
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
-		GROUP BY threads.id
+		GROUP BY boards.name, threads.id
 		ORDER BY sort_latest_reply DESC`,
 		name,
 	)
@@ -105,7 +107,7 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 
 	for rows.Next() {
 		var t eggchan.Thread
-		if err := rows.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
+		if err := rows.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
 			return threads, err
 		}
 		threads = append(threads, t)
@@ -522,6 +524,7 @@ func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
 func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, error) {
 	t_row := s.DB.QueryRow(
 		`SELECT
+			boards.name,
 			threads.post_num,
 			threads.subject,
 			threads.author,
@@ -535,16 +538,17 @@ func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, err
 			threads.comment
 		FROM threads
 		LEFT JOIN comments ON threads.id = comments.reply_to
+		INNER JOIN boards ON threads.board_id = boards.id
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
 		AND threads.post_num = $2
-		GROUP BY threads.id
+		GROUP BY boards.name, threads.id
 		ORDER BY sort_latest_reply DESC`,
 		board,
 		id,
 	)
 
 	var t eggchan.Thread
-	if err := t_row.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
+	if err := t_row.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
 		return t, err
 	}
 
