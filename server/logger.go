@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"log"
@@ -29,3 +29,4 @@ func Logger(inner http.Handler) http.Handler {
 		)
 	})
 }
+

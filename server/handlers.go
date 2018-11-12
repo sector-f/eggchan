@@ -1,20 +1,31 @@
-package main
+package server
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/lib/pq"
-	_ "golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/gorilla/mux"
+	"github.com/sector-f/eggchan"
+	"github.com/lib/pq"
 )
+
+type boardReply struct {
+	Board   eggchan.Board    `json:"board"`
+	Threads []eggchan.Thread `json:"threads"`
+}
+
+type threadReply struct {
+	Thread eggchan.Thread `json:"op"`
+	Posts  []eggchan.Post `json:"posts"`
+}
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotFound, "Not found")
 }
 
-func (a *Server) getCategories(w http.ResponseWriter, r *http.Request) {
-	categories, err := getCategoriesFromDB(a.DB)
+func (e *HttpServer) getCategories(w http.ResponseWriter, r *http.Request) {
+	categories, err := e.BoardService.ListCategories()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -23,11 +34,11 @@ func (a *Server) getCategories(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, categories)
 }
 
-func (a *Server) showCategory(w http.ResponseWriter, r *http.Request) {
+func (e *HttpServer) showCategory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["category"]
 
-	boards, err := showCategoryFromDB(a.DB, name)
+	boards, err := e.BoardService.ShowCategory(name)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid category")
 		return
@@ -36,20 +47,26 @@ func (a *Server) showCategory(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, boards)
 }
 
-func (a *Server) showBoard(w http.ResponseWriter, r *http.Request) {
+func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["board"]
 
-	posts, err := showBoardFromDB(a.DB, name)
+	board, err := e.BoardService.ShowBoardDesc(name)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid board")
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, posts)
+	posts, err := e.BoardService.ShowBoard(name)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid board")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, boardReply{board, posts})
 }
 
-func (a *Server) showThread(w http.ResponseWriter, r *http.Request) {
+func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
@@ -59,17 +76,23 @@ func (a *Server) showThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := showThreadFromDB(a.DB, board, thread)
+	op, err := e.BoardService.ShowThreadOP(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, posts)
+	posts, err := e.BoardService.ShowThread(board, thread)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, threadReply{op, posts})
 }
 
-func (a *Server) getBoards(w http.ResponseWriter, r *http.Request) {
-	boards, err := getBoardsFromDB(a.DB)
+func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
+	boards, err := e.BoardService.ListBoards()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -78,7 +101,7 @@ func (a *Server) getBoards(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, boards)
 }
 
-func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
+func (e *HttpServer) postThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
@@ -96,14 +119,14 @@ func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := r.FormValue("author")
-	if name == "" {
-		name = "Anonymous"
+	author := r.FormValue("author")
+	if author == "" {
+		author = "Anonymous"
 	}
 
 	subject := r.FormValue("subject")
 
-	post_num, err := makeThreadInDB(a.DB, board, comment, name, subject)
+	post_num, err := e.BoardService.MakeThread(board, comment, author, subject)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Error creating thread")
 		return
@@ -112,24 +135,13 @@ func (a *Server) postThread(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, map[string]int{"post_num": post_num})
 }
 
-func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
+func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
 	thread, err := strconv.Atoi(vars["thread"])
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Invalid thread ID")
-		return
-	}
-
-	is_op, err := checkIsOp(a.DB, board, thread)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Error")
-		return
-	}
-
-	if !is_op {
-		respondWithError(w, http.StatusBadRequest, "Specified post is not OP")
 		return
 	}
 
@@ -146,12 +158,12 @@ func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := strings.TrimSpace(r.FormValue("author"))
-	if name == "" {
-		name = "Anonymous"
+	author := strings.TrimSpace(r.FormValue("author"))
+	if author == "" {
+		author = "Anonymous"
 	}
 
-	post_num, err := makePostInDB(a.DB, board, thread, comment, name)
+	post_num, err := e.BoardService.MakeComment(board, thread, comment, author)
 	if err != nil {
 		if err.(*pq.Error).Message == "Thread has reached post limit" {
 			respondWithError(w, http.StatusForbidden, "Thread has reached post limit")
@@ -164,7 +176,7 @@ func (a *Server) postReply(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, map[string]int{"post_num": post_num})
 }
 
-func (a *Server) deleteThread(w http.ResponseWriter, r *http.Request) {
+func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
@@ -174,14 +186,7 @@ func (a *Server) deleteThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	is_op, err := checkIsOp(a.DB, board, thread)
-
-	if !is_op {
-		respondWithError(w, http.StatusBadRequest, "Invalid thread ID")
-		return
-	}
-
-	deleted_count, err := deleteThreadInDB(a.DB, board, thread)
+	deleted_count, err := e.AdminService.DeleteThread(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not delete thread")
 		return
@@ -197,7 +202,7 @@ func (a *Server) deleteThread(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *Server) deleteComment(w http.ResponseWriter, r *http.Request) {
+func (e *HttpServer) deleteComment(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
 
@@ -207,14 +212,7 @@ func (a *Server) deleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	is_op, err := checkIsOp(a.DB, board, thread)
-
-	if is_op {
-		respondWithError(w, http.StatusBadRequest, "Invalid comment ID")
-		return
-	}
-
-	deleted_count, err := deleteCommentInDB(a.DB, board, thread)
+	deleted_count, err := e.AdminService.DeleteComment(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not delete comment")
 		return
