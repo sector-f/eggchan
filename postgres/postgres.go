@@ -9,11 +9,11 @@ import (
 )
 
 type EggchanService struct {
-	db *sql.DB
+	DB *sql.DB
 }
 
 func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
-	rows, err := s.db.Query("SELECT name FROM categories ORDER BY name ASC")
+	rows, err := s.DB.Query("SELECT name FROM categories ORDER BY name ASC")
 
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 }
 
 func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
-	rows, err := s.db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id ORDER BY boards.name ASC")
+	rows, err := s.DB.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id ORDER BY boards.name ASC")
 
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
 }
 
 func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
-	rows, err := s.db.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1 ORDER BY boards.name ASC", name)
+	rows, err := s.DB.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1 ORDER BY boards.name ASC", name)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 func (s *EggchanService) ShowBoard(name string) (eggchan.BoardReply, error) {
 	var reply eggchan.BoardReply
 
-	b_row := s.db.QueryRow(
+	b_row := s.DB.QueryRow(
 		`SELECT boards.name, boards.description, boards.category
 		FROM boards
 		WHERE boards.name = $1`,
@@ -89,7 +89,7 @@ func (s *EggchanService) ShowBoard(name string) (eggchan.BoardReply, error) {
 		return reply, err
 	}
 
-	rows, err := s.db.Query(
+	rows, err := s.DB.Query(
 		`SELECT
 			threads.post_num,
 			threads.subject,
@@ -131,7 +131,7 @@ func (s *EggchanService) ShowBoard(name string) (eggchan.BoardReply, error) {
 func (s *EggchanService) ShowThread(board string, thread_num int) (eggchan.ThreadReply, error) {
 	var reply eggchan.ThreadReply
 
-	t_row := s.db.QueryRow(
+	t_row := s.DB.QueryRow(
 		`SELECT
 			threads.post_num,
 			threads.subject,
@@ -159,7 +159,7 @@ func (s *EggchanService) ShowThread(board string, thread_num int) (eggchan.Threa
 		return reply, err
 	}
 
-	c_rows, err := s.db.Query(
+	c_rows, err := s.DB.Query(
 		`SELECT comments.post_num, comments.author, comments.time, comments.comment
 		FROM comments
 		INNER JOIN threads ON comments.reply_to = threads.id
@@ -189,7 +189,7 @@ func (s *EggchanService) ShowThread(board string, thread_num int) (eggchan.Threa
 }
 
 func (s *EggchanService) MakeThread(board string, comment string, author string, subject string) (int, error) {
-	rows, err := s.db.Query(
+	rows, err := s.DB.Query(
 		`INSERT INTO threads (board_id, comment, author, subject)
 		VALUES(
 			(SELECT id FROM boards WHERE name = $1),
@@ -222,7 +222,7 @@ func (s *EggchanService) MakeThread(board string, comment string, author string,
 
 func (s *EggchanService) MakeComment(board string, thread int, comment string, author string) (int, error) {
 	// TODO: use QueryRow here
-	rows, err := s.db.Query(
+	rows, err := s.DB.Query(
 		`INSERT INTO comments (reply_to, comment, author)
 		VALUES(
 			(SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2),
@@ -253,7 +253,7 @@ func (s *EggchanService) MakeComment(board string, thread int, comment string, a
 }
 
 func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
-	rows, err := s.db.Query(
+	rows, err := s.DB.Query(
 		`SELECT post_num
 		FROM threads
 		INNER JOIN boards ON threads.board_id = boards.id
@@ -284,7 +284,7 @@ func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
 }
 
 func (s *EggchanService) getUserAuthentication(name string, pw []byte) (bool, error) {
-	pw_row := s.db.QueryRow(`SELECT password FROM users WHERE username = $1`, name)
+	pw_row := s.DB.QueryRow(`SELECT password FROM users WHERE username = $1`, name)
 	var db_pw []byte
 	if err := pw_row.Scan(&db_pw); err != nil {
 		return false, err
@@ -298,7 +298,7 @@ func (s *EggchanService) getUserAuthentication(name string, pw []byte) (bool, er
 }
 
 func (s *EggchanService) getUserAuthorization(name string, perm string) (bool, error) {
-	row := s.db.QueryRow(
+	row := s.DB.QueryRow(
 		`SELECT COUNT(*) FROM user_permissions
 		WHERE user_id = (SELECT id FROM users WHERE username = $1)
 		AND permission = (SELECT id FROM permissions WHERE name = $2)`,
@@ -319,7 +319,7 @@ func (s *EggchanService) getUserAuthorization(name string, perm string) (bool, e
 }
 
 func (s *EggchanService) DeleteThread(board string, thread int) (int64, error) {
-	result, err := s.db.Exec(
+	result, err := s.DB.Exec(
 		`DELETE FROM threads
 		WHERE board_id = (SELECT id FROM boards WHERE name = $1)
 		AND post_num = $2`,
@@ -336,7 +336,7 @@ func (s *EggchanService) DeleteThread(board string, thread int) (int64, error) {
 }
 
 func (s *EggchanService) DeleteComment(board string, comment int) (int64, error) {
-	result, err := s.db.Exec(
+	result, err := s.DB.Exec(
 		`DELETE FROM comments
 		USING threads
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
@@ -354,7 +354,7 @@ func (s *EggchanService) DeleteComment(board string, comment int) (int64, error)
 }
 
 func (s *EggchanService) AddUser(user, password string) error {
-	_, err := s.db.Exec(
+	_, err := s.DB.Exec(
 		`INSERT INTO users (username, password) VALUES ($1, $2)`,
 		user,
 		password,
@@ -368,7 +368,7 @@ func (s *EggchanService) AddUser(user, password string) error {
 }
 
 func (s *EggchanService) DeleteUser(user string) error {
-	result, err := s.db.Exec(
+	result, err := s.DB.Exec(
 		`DELETE FROM users WHERE username = $1`,
 		user,
 	)
@@ -388,7 +388,7 @@ func (s *EggchanService) DeleteUser(user string) error {
 func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 	userList := []eggchan.User{}
 
-	rows, err := s.db.Query(`SELECT username FROM users ORDER BY id ASC`)
+	rows, err := s.DB.Query(`SELECT username FROM users ORDER BY id ASC`)
 	if err != nil {
 		return userList, err
 	}
@@ -402,7 +402,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 	}
 
 	for _, user := range userList {
-		rows, err = s.db.Query(
+		rows, err = s.DB.Query(
 			`SELECT name FROM permissions p
 			INNER JOIN user_permissions up ON p.id = up.permission
 			INNER JOIN users u ON u.id = up.user_id
@@ -431,7 +431,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 
 func (s *EggchanService) GrantPermissions(user string, perms []eggchan.Permission) error {
 	for _, perm := range perms {
-		_, err := s.db.Exec(
+		_, err := s.DB.Exec(
 			`INSERT INTO user_permissions (user_id, permission) VALUES
 			((SELECT id FROM users WHERE username = $1), (SELECT id FROM permissions WHERE name = $2))`,
 			user,
@@ -448,7 +448,7 @@ func (s *EggchanService) GrantPermissions(user string, perms []eggchan.Permissio
 
 func (s *EggchanService) RevokePermissions(user string, perms []eggchan.Permission) error {
 	for _, perm := range perms {
-		_, err := s.db.Exec(
+		_, err := s.DB.Exec(
 			`DELETE FROM user_permissions
 			WHERE user_id = (SELECT id FROM users WHERE username = $1)
 			AND permission = (SELECT id FROM permissions WHERE name = $2)`,
@@ -467,7 +467,7 @@ func (s *EggchanService) RevokePermissions(user string, perms []eggchan.Permissi
 
 func (s *EggchanService) ListPermissions() ([]eggchan.Permission, error) {
 	perms := []eggchan.Permission{}
-	rows, err := s.db.Query(`SELECT name FROM permissions ORDER BY id ASC`)
+	rows, err := s.DB.Query(`SELECT name FROM permissions ORDER BY id ASC`)
 	if err != nil {
 		return perms, err
 	}
@@ -498,7 +498,7 @@ func (s *EggchanService) AddBoard(board, description, category string) error {
 		c = sql.NullString{category, true}
 	}
 
-	_, err := s.db.Exec(
+	_, err := s.DB.Exec(
 		`INSERT INTO boards (name, description, category) VALUES ($1, $2, (SELECT id FROM categories WHERE name = $3))`,
 		board,
 		d,
@@ -513,7 +513,7 @@ func (s *EggchanService) AddBoard(board, description, category string) error {
 }
 
 func (s *EggchanService) ValidatePassword(user string, password []byte) (bool, error) {
-	pw_row := s.db.QueryRow(`SELECT password FROM users WHERE username = $1`, user)
+	pw_row := s.DB.QueryRow(`SELECT password FROM users WHERE username = $1`, user)
 	var db_pw []byte
 	if err := pw_row.Scan(&db_pw); err != nil {
 		return false, err
@@ -527,7 +527,7 @@ func (s *EggchanService) ValidatePassword(user string, password []byte) (bool, e
 }
 
 func (s *EggchanService) CheckPermission(user, permission string) (bool, error) {
-	row := s.db.QueryRow(
+	row := s.DB.QueryRow(
 		`SELECT COUNT(*) from user_permissions
 		WHERE user_id = (SELECT id FROM users WHERE username = $1 LIMIT 1)
 		AND permission = (SELECT id FROM permissions WHERE name = $2 LIMIT 1)`,

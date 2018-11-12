@@ -23,7 +23,7 @@ type AdminService interface {
 }
 
 type AuthService interface {
-	AddUser(user string) error
+	AddUser(user, password string) error
 	DeleteUser(user string) error
 	ListUsers() ([]User, error)
 	ValidatePassword(user string, password []byte) (bool, error)

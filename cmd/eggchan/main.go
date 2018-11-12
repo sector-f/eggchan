@@ -1,9 +1,14 @@
 package main
 
 import (
-	"github.com/urfave/cli"
+	"database/sql"
+	"fmt"
 	"log"
 	"os"
+
+	"github.com/sector-f/eggchan/postgres"
+	"github.com/sector-f/eggchan/server"
+	"github.com/urfave/cli"
 )
 
 func main() {
@@ -35,13 +40,20 @@ func main() {
 	}
 
 	app.Action = func(ctx *cli.Context) error {
-		server := Server{}
-		server.Initialize(
-			ctx.String("username"),
-			ctx.String("password"),
-			ctx.String("database"),
-		)
-		server.Run(ctx.String("bind"))
+		connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", ctx.String("database"))
+		db, err := sql.Open("postgres", connectionString)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		service := postgres.EggchanService{db}
+		httpServer := server.HttpServer{
+			BoardService: &service,
+			AdminService: &service,
+			AuthService: &service,
+		}
+		httpServer.Initialize()
+		httpServer.Run(ctx.String("bind"))
 
 		return nil
 	}
