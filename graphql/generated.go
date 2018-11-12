@@ -56,7 +56,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Boards func(childComplexity int) int
+		Boards func(childComplexity int, name *string) int
 	}
 
 	Thread struct {
@@ -84,7 +84,7 @@ type PostResolver interface {
 	Comment(ctx context.Context, obj *Post) (string, error)
 }
 type QueryResolver interface {
-	Boards(ctx context.Context) ([]*Board, error)
+	Boards(ctx context.Context, name *string) ([]*Board, error)
 }
 type ThreadResolver interface {
 	PostNum(ctx context.Context, obj *Thread) (int, error)
@@ -95,6 +95,26 @@ type ThreadResolver interface {
 	LatestReplyTime(ctx context.Context, obj *Thread) (time.Time, error)
 	Comment(ctx context.Context, obj *Thread) (string, error)
 	Posts(ctx context.Context, obj *Thread) ([]*Post, error)
+}
+
+func field_Query_boards_args(rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		var err error
+		var ptr1 string
+		if tmp != nil {
+			ptr1, err = graphql.UnmarshalString(tmp)
+			arg0 = &ptr1
+		}
+
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	return args, nil
+
 }
 
 func field_Query___type_args(rawArgs map[string]interface{}) (map[string]interface{}, error) {
@@ -216,7 +236,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Boards(childComplexity), true
+		args, err := field_Query_boards_args(rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Boards(childComplexity, args["name"].(*string)), true
 
 	case "Thread.postNum":
 		if e.complexity.Thread.PostNum == nil {
@@ -727,16 +752,22 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 func (ec *executionContext) _Query_boards(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer ec.Tracer.EndFieldExecution(ctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := field_Query_boards_args(rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
 	rctx := &graphql.ResolverContext{
 		Object: "Query",
-		Args:   nil,
+		Args:   args,
 		Field:  field,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp := ec.FieldMiddleware(ctx, nil, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Boards(rctx)
+		return ec.resolvers.Query().Boards(rctx, args["name"].(*string))
 	})
 	if resTmp == nil {
 		if !ec.HasError(rctx) {
@@ -2662,7 +2693,7 @@ func (ec *executionContext) introspectType(name string) *introspection.Type {
 
 var parsedSchema = gqlparser.MustLoadSchema(
 	&ast.Source{Name: "schema.graphql", Input: `type Query {
-	boards: [Board]!
+	boards(name: String): [Board]!
 }
 
 type Board {

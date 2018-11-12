@@ -1,5 +1,5 @@
 type Query {
-	boards: [Board]!
+	boards(name: String): [Board]!
 }
 
 type Board {

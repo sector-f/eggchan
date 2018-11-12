@@ -80,14 +80,14 @@ func (r *boardResolver) Threads(ctx context.Context, obj *Board) ([]*Thread, err
 		}
 
 		newThread := Thread{
-			board: thread.Board,
-			postNum: thread.PostNum,
-			subject: thread.Subject.String,
-			author: thread.Author,
-			numReplies: thread.NumReplies,
+			board:           thread.Board,
+			postNum:         thread.PostNum,
+			subject:         thread.Subject.String,
+			author:          thread.Author,
+			numReplies:      thread.NumReplies,
 			latestReplyTime: thread.SortLatestReply,
-			comment: thread.Comment,
-			posts: posts,
+			comment:         thread.Comment,
+			posts:           posts,
 		}
 
 		threadReply = append(threadReply, &newThread)
@@ -113,7 +113,7 @@ func (r *postResolver) Comment(ctx context.Context, obj *Post) (string, error) {
 
 type queryResolver struct{ *Resolver }
 
-func (r *queryResolver) Boards(ctx context.Context) ([]*Board, error) {
+func (r *queryResolver) Boards(ctx context.Context, name *string) ([]*Board, error) {
 	boardReply := []*Board{}
 
 	boards, err := r.Service.ListBoards()
@@ -122,25 +122,27 @@ func (r *queryResolver) Boards(ctx context.Context) ([]*Board, error) {
 	}
 
 	for _, board := range boards {
-		threads := []int{}
+		if name == nil || board.Name == *name {
+			threads := []int{}
 
-		threadsInBoard, err := r.Service.ShowBoard(board.Name)
-		if err != nil {
-			return nil, err
+			threadsInBoard, err := r.Service.ShowBoard(board.Name)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, thread := range threadsInBoard {
+				threads = append(threads, thread.PostNum)
+			}
+
+			newBoard := Board{
+				name:        board.Name,
+				description: board.Description.String,
+				category:    board.Category.String,
+				threads:     threads,
+			}
+
+			boardReply = append(boardReply, &newBoard)
 		}
-
-		for _, thread := range threadsInBoard {
-			threads = append(threads, thread.PostNum)
-		}
-
-		newBoard := Board{
-			name:        board.Name,
-			description: board.Description.String,
-			category:    board.Category.String,
-			threads:     threads,
-		}
-
-		boardReply = append(boardReply, &newBoard)
 	}
 
 	return boardReply, nil
