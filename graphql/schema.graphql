@@ -1,0 +1,30 @@
+type Query {
+	boards: [Board]!
+}
+
+type Board {
+	name: String!
+	description: String
+	category: String
+	threads: [Thread]!
+}
+
+type Thread {
+	postNum: Int!
+	subject: String
+	author: String!
+	time: Time!
+	numReplies: Int!
+	latestReplyTime: Time!
+	comment: String!
+	posts: [Post]!
+}
+
+type Post {
+	postNum: Int!
+	author: String!
+	time: Time!
+	comment: String!
+}
+
+scalar Time
