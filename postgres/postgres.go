@@ -401,7 +401,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 		userList = append(userList, eggchan.User{u, []string{}})
 	}
 
-	for _, user := range userList {
+	for i, user := range userList {
 		rows, err = s.DB.Query(
 			`SELECT name FROM permissions p
 			INNER JOIN user_permissions up ON p.id = up.permission
@@ -423,7 +423,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 			permissions = append(permissions, p)
 		}
 
-		user.Perms = permissions
+		userList[i].Perms = permissions
 	}
 
 	return userList, nil
