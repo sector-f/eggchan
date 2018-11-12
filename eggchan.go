@@ -10,10 +10,12 @@ type BoardService interface {
 	ListCategories() ([]Category, error)
 	ShowCategory(name string) ([]Board, error)
 	ListBoards() ([]Board, error)
-	ShowBoard(board string) (BoardReply, error)
-	ShowThread(board string, id int) (ThreadReply, error)
+	ShowBoard(board string) ([]Thread, error)
+	ShowThread(board string, id int) ([]Post, error)
 	MakeThread(board, comment, author, subject string) (int, error)
 	MakeComment(board string, thread int, comment string, author string) (int, error)
+	ShowBoardDesc(board string) (Board, error)
+	ShowThreadOP(board string, id int) (Thread, error)
 }
 
 type AdminService interface {
@@ -35,16 +37,6 @@ type AuthService interface {
 
 type Category struct {
 	Name string `json:"name"`
-}
-
-type BoardReply struct {
-	Board   Board    `json:"board"`
-	Threads []Thread `json:"threads"`
-}
-
-type ThreadReply struct {
-	Thread Thread `json:"op"`
-	Posts  []Post `json:"posts"`
 }
 
 type Board struct {

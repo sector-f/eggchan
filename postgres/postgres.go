@@ -74,21 +74,7 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 	return boards, nil
 }
 
-func (s *EggchanService) ShowBoard(name string) (eggchan.BoardReply, error) {
-	var reply eggchan.BoardReply
-
-	b_row := s.DB.QueryRow(
-		`SELECT boards.name, boards.description, boards.category
-		FROM boards
-		WHERE boards.name = $1`,
-		name,
-	)
-
-	var b eggchan.Board
-	if err := b_row.Scan(&b.Name, &b.Description, &b.Category); err != nil {
-		return reply, err
-	}
-
+func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 	rows, err := s.DB.Query(
 		`SELECT
 			threads.post_num,
@@ -110,55 +96,25 @@ func (s *EggchanService) ShowBoard(name string) (eggchan.BoardReply, error) {
 		name,
 	)
 
+	threads := []eggchan.Thread{}
+
 	if err != nil {
-		return reply, err
+		return threads, err
 	}
 	defer rows.Close()
 
-	threads := []eggchan.Thread{}
 	for rows.Next() {
 		var t eggchan.Thread
 		if err := rows.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
-			return reply, err
+			return threads, err
 		}
 		threads = append(threads, t)
 	}
 
-	reply = eggchan.BoardReply{b, threads}
-	return reply, nil
+	return threads, nil
 }
 
-func (s *EggchanService) ShowThread(board string, thread_num int) (eggchan.ThreadReply, error) {
-	var reply eggchan.ThreadReply
-
-	t_row := s.DB.QueryRow(
-		`SELECT
-			threads.post_num,
-			threads.subject,
-			threads.author,
-			threads.time,
-			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) AS num_replies,
-			CASE
-				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= (SELECT bump_limit FROM boards WHERE name = $1)  THEN (SELECT comments.time FROM comments OFFSET (SELECT bump_limit FROM boards WHERE name = $1) LIMIT 1)
-				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
-				ELSE MAX(threads.time)
-			END AS sort_latest_reply,
-			threads.comment
-		FROM threads
-		LEFT JOIN comments ON threads.id = comments.reply_to
-		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
-		AND threads.post_num = $2
-		GROUP BY threads.id
-		ORDER BY sort_latest_reply DESC`,
-		board,
-		thread_num,
-	)
-
-	var t eggchan.Thread
-	if err := t_row.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
-		return reply, err
-	}
-
+func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Post, error) {
 	c_rows, err := s.DB.Query(
 		`SELECT comments.post_num, comments.author, comments.time, comments.comment
 		FROM comments
@@ -170,22 +126,22 @@ func (s *EggchanService) ShowThread(board string, thread_num int) (eggchan.Threa
 		thread_num,
 	)
 
+	posts := []eggchan.Post{}
+
 	if err != nil {
-		return reply, err
+		return posts, err
 	}
 	defer c_rows.Close()
 
-	posts := []eggchan.Post{}
 	for c_rows.Next() {
 		var p eggchan.Post
 		if err := c_rows.Scan(&p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
-			return reply, err
+			return posts, err
 		}
 		posts = append(posts, p)
 	}
 
-	reply = eggchan.ThreadReply{t, posts}
-	return reply, nil
+	return posts, nil
 }
 
 func (s *EggchanService) MakeThread(board string, comment string, author string, subject string) (int, error) {
@@ -545,4 +501,52 @@ func (s *EggchanService) CheckPermission(user, permission string) (bool, error) 
 	} else {
 		return false, nil
 	}
+}
+
+func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
+	b_row := s.DB.QueryRow(
+		`SELECT boards.name, boards.description, boards.category
+		FROM boards
+		WHERE boards.name = $1`,
+		board,
+	)
+
+	var b eggchan.Board
+	if err := b_row.Scan(&b.Name, &b.Description, &b.Category); err != nil {
+		return b, err
+	}
+
+	return b, nil
+}
+
+func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, error) {
+	t_row := s.DB.QueryRow(
+		`SELECT
+			threads.post_num,
+			threads.subject,
+			threads.author,
+			threads.time,
+			(SELECT COUNT(*) FROM comments WHERE comments.reply_to = threads.id) AS num_replies,
+			CASE
+				WHEN MAX(comments.time) IS NOT NULL AND COUNT(*) >= (SELECT bump_limit FROM boards WHERE name = $1)  THEN (SELECT comments.time FROM comments OFFSET (SELECT bump_limit FROM boards WHERE name = $1) LIMIT 1)
+				WHEN MAX(comments.time) IS NOT NULL THEN MAX(comments.time)
+				ELSE MAX(threads.time)
+			END AS sort_latest_reply,
+			threads.comment
+		FROM threads
+		LEFT JOIN comments ON threads.id = comments.reply_to
+		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		AND threads.post_num = $2
+		GROUP BY threads.id
+		ORDER BY sort_latest_reply DESC`,
+		board,
+		id,
+	)
+
+	var t eggchan.Thread
+	if err := t_row.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
+		return t, err
+	}
+
+	return t, nil
 }

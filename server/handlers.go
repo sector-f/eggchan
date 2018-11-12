@@ -6,8 +6,19 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/sector-f/eggchan"
 	"github.com/lib/pq"
 )
+
+type boardReply struct {
+	Board   eggchan.Board    `json:"board"`
+	Threads []eggchan.Thread `json:"threads"`
+}
+
+type threadReply struct {
+	Thread eggchan.Thread `json:"op"`
+	Posts  []eggchan.Post `json:"posts"`
+}
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotFound, "Not found")
@@ -40,13 +51,19 @@ func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["board"]
 
+	board, err := e.BoardService.ShowBoardDesc(name)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid board")
+		return
+	}
+
 	posts, err := e.BoardService.ShowBoard(name)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid board")
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, posts)
+	respondWithJSON(w, http.StatusOK, boardReply{board, posts})
 }
 
 func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
@@ -59,13 +76,19 @@ func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	op, err := e.BoardService.ShowThreadOP(board, thread)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
+		return
+	}
+
 	posts, err := e.BoardService.ShowThread(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, posts)
+	respondWithJSON(w, http.StatusOK, threadReply{op, posts})
 }
 
 func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
