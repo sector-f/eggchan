@@ -10,8 +10,11 @@ import (
 	"github.com/chzyer/readline"
 	shellquote "github.com/kballard/go-shellquote"
 	_ "github.com/lib/pq"
+	"github.com/sector-f/eggchan/postgres"
 	"github.com/spf13/cobra"
 )
+
+var Service postgres.EggchanService
 
 // Cobra global variables
 var Database string
@@ -45,7 +48,7 @@ func init() {
 var rootCmd = &cobra.Command{
 	Use:   "eggshell",
 	Short: "Command-line interface to the Eggchan database",
-	Run: func(cmd *cobra.Command, args []string) {
+	PreRun: func(cmd *cobra.Command, args []string) {
 		connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", cmd.Flag("database").Value.String())
 		var err error
 		db, err := sql.Open("postgres", connectionString)
@@ -60,6 +63,11 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
+		Service = postgres.EggchanService{db}
+
+		return
+	},
+	Run: func(cmd *cobra.Command, args []string) {
 		var prompt string
 		if egg, _ := cmd.Flags().GetBool("egg"); egg {
 			prompt = "🥚 "
@@ -96,7 +104,7 @@ var rootCmd = &cobra.Command{
 				fmt.Printf("Syntax error: %s\n", err)
 				continue
 			} else {
-				if runCommand(db, arguments) {
+				if runCommand(arguments) {
 					break repl
 				}
 			}
@@ -105,7 +113,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func runCommand(db *sql.DB, arguments []string) (break_loop bool) {
+func runCommand(arguments []string) (break_loop bool) {
 	if len(arguments) == 0 {
 		return false
 	}
@@ -114,21 +122,21 @@ func runCommand(db *sql.DB, arguments []string) (break_loop bool) {
 
 	switch arguments[0] {
 	case "add-user":
-		command = addUserCommand(db)
+		command = addUserCommand()
 	case "delete-user":
-		command = deleteUserCommand(db)
+		command = deleteUserCommand()
 	case "list-users":
-		command = listUsersCommand(db)
+		command = listUsersCommand()
 	case "grant-permissions":
-		command = grantPermissionsCommand(db)
+		command = grantPermissionsCommand()
 	case "revoke-permissions":
-		command = revokePermissionsCommand(db)
+		command = revokePermissionsCommand()
 	case "list-permissions":
-		command = listPermissionsCommand(db)
+		command = listPermissionsCommand()
 	case "add-board":
-		command = addBoardCommand(db)
+		command = addBoardCommand()
 	case "list-boards":
-		command = listBoardsCommand(db)
+		command = listBoardsCommand()
 	case "help":
 		commands := []string{
 			"add-user",

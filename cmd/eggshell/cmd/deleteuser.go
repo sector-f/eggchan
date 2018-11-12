@@ -1,15 +1,13 @@
 package cmd
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 
-	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 )
 
-func deleteUserCommand(db *sql.DB) *cobra.Command {
+func deleteUserCommand() *cobra.Command {
 	command := cobra.Command{
 		Use:           "delete-user",
 		Short:         "Delete user from the Eggchan database",
@@ -20,7 +18,7 @@ func deleteUserCommand(db *sql.DB) *cobra.Command {
 			username := args[0]
 
 			if username != "" {
-				if err := deleteUser(db, username); err != nil {
+				if err := Service.DeleteUser(username); err != nil {
 					fmt.Printf("Error: %s\n", err)
 				} else {
 					fmt.Println("User", username, "deleted successfully")
@@ -38,22 +36,4 @@ func deleteUserCommand(db *sql.DB) *cobra.Command {
 	})
 
 	return &command
-}
-
-func deleteUser(db *sql.DB, user string) error {
-	result, err := db.Exec(
-		`DELETE FROM users WHERE username = $1`,
-		user,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	affected, _ := result.RowsAffected()
-	if affected != 1 {
-		return errors.New("User not found")
-	}
-
-	return nil
 }
