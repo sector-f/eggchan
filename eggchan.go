@@ -46,7 +46,7 @@ type Board struct {
 }
 
 type Thread struct {
-	Board           string      `json:"-"`
+	Board           string      `json:"board"`
 	PostNum         int         `json:"post_num"`
 	Subject         null.String `json:"subject"`
 	Author          string      `json:"author"`
@@ -57,6 +57,8 @@ type Thread struct {
 }
 
 type Post struct {
+	Board   string    `json:"board"`
+	ReplyTo int       `json:"post_num"`
 	PostNum int       `json:"post_num"`
 	Author  string    `json:"author"`
 	Time    time.Time `json:"time"`
