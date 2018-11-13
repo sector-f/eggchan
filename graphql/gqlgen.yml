@@ -13,6 +13,8 @@ resolver:
   filename: resolver.go
   type: Resolver
 models:
+  Category:
+    model: github.com/sector-f/eggchan/graphql.Category
   Board:
     model: github.com/sector-f/eggchan/graphql.Board
   Thread:

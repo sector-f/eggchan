@@ -2,6 +2,11 @@ package graphql
 
 import "time"
 
+type Category struct {
+	name   string
+	boards []string
+}
+
 type Board struct {
 	name        string
 	description string

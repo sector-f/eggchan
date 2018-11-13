@@ -32,6 +32,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	Board() BoardResolver
+	Category() CategoryResolver
 	Post() PostResolver
 	Query() QueryResolver
 	Thread() ThreadResolver
@@ -48,6 +49,11 @@ type ComplexityRoot struct {
 		Threads     func(childComplexity int) int
 	}
 
+	Category struct {
+		Name   func(childComplexity int) int
+		Boards func(childComplexity int) int
+	}
+
 	Post struct {
 		PostNum func(childComplexity int) int
 		Author  func(childComplexity int) int
@@ -56,7 +62,8 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Boards func(childComplexity int, name *string) int
+		Categories func(childComplexity int, name *string) int
+		Boards     func(childComplexity int, name *string) int
 	}
 
 	Thread struct {
@@ -77,6 +84,10 @@ type BoardResolver interface {
 	Category(ctx context.Context, obj *Board) (*string, error)
 	Threads(ctx context.Context, obj *Board) ([]*Thread, error)
 }
+type CategoryResolver interface {
+	Name(ctx context.Context, obj *Category) (string, error)
+	Boards(ctx context.Context, obj *Category) ([]*Board, error)
+}
 type PostResolver interface {
 	PostNum(ctx context.Context, obj *Post) (int, error)
 	Author(ctx context.Context, obj *Post) (string, error)
@@ -84,6 +95,7 @@ type PostResolver interface {
 	Comment(ctx context.Context, obj *Post) (string, error)
 }
 type QueryResolver interface {
+	Categories(ctx context.Context, name *string) ([]*Category, error)
 	Boards(ctx context.Context, name *string) ([]*Board, error)
 }
 type ThreadResolver interface {
@@ -95,6 +107,26 @@ type ThreadResolver interface {
 	LatestReplyTime(ctx context.Context, obj *Thread) (time.Time, error)
 	Comment(ctx context.Context, obj *Thread) (string, error)
 	Posts(ctx context.Context, obj *Thread) ([]*Post, error)
+}
+
+func field_Query_categories_args(rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		var err error
+		var ptr1 string
+		if tmp != nil {
+			ptr1, err = graphql.UnmarshalString(tmp)
+			arg0 = &ptr1
+		}
+
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	return args, nil
+
 }
 
 func field_Query_boards_args(rawArgs map[string]interface{}) (map[string]interface{}, error) {
@@ -203,6 +235,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Board.Threads(childComplexity), true
 
+	case "Category.name":
+		if e.complexity.Category.Name == nil {
+			break
+		}
+
+		return e.complexity.Category.Name(childComplexity), true
+
+	case "Category.boards":
+		if e.complexity.Category.Boards == nil {
+			break
+		}
+
+		return e.complexity.Category.Boards(childComplexity), true
+
 	case "Post.postNum":
 		if e.complexity.Post.PostNum == nil {
 			break
@@ -230,6 +276,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Post.Comment(childComplexity), true
+
+	case "Query.categories":
+		if e.complexity.Query.Categories == nil {
+			break
+		}
+
+		args, err := field_Query_categories_args(rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Categories(childComplexity, args["name"].(*string)), true
 
 	case "Query.boards":
 		if e.complexity.Query.Boards == nil {
@@ -535,6 +593,141 @@ func (ec *executionContext) _Board_threads(ctx context.Context, field graphql.Co
 	return arr1
 }
 
+var categoryImplementors = []string{"Category"}
+
+// nolint: gocyclo, errcheck, gas, goconst
+func (ec *executionContext) _Category(ctx context.Context, sel ast.SelectionSet, obj *Category) graphql.Marshaler {
+	fields := graphql.CollectFields(ctx, sel, categoryImplementors)
+
+	var wg sync.WaitGroup
+	out := graphql.NewOrderedMap(len(fields))
+	invalid := false
+	for i, field := range fields {
+		out.Keys[i] = field.Alias
+
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Category")
+		case "name":
+			wg.Add(1)
+			go func(i int, field graphql.CollectedField) {
+				out.Values[i] = ec._Category_name(ctx, field, obj)
+				if out.Values[i] == graphql.Null {
+					invalid = true
+				}
+				wg.Done()
+			}(i, field)
+		case "boards":
+			wg.Add(1)
+			go func(i int, field graphql.CollectedField) {
+				out.Values[i] = ec._Category_boards(ctx, field, obj)
+				if out.Values[i] == graphql.Null {
+					invalid = true
+				}
+				wg.Done()
+			}(i, field)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	wg.Wait()
+	if invalid {
+		return graphql.Null
+	}
+	return out
+}
+
+// nolint: vetshadow
+func (ec *executionContext) _Category_name(ctx context.Context, field graphql.CollectedField, obj *Category) graphql.Marshaler {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer ec.Tracer.EndFieldExecution(ctx)
+	rctx := &graphql.ResolverContext{
+		Object: "Category",
+		Args:   nil,
+		Field:  field,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp := ec.FieldMiddleware(ctx, obj, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Category().Name(rctx, obj)
+	})
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return graphql.MarshalString(res)
+}
+
+// nolint: vetshadow
+func (ec *executionContext) _Category_boards(ctx context.Context, field graphql.CollectedField, obj *Category) graphql.Marshaler {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer ec.Tracer.EndFieldExecution(ctx)
+	rctx := &graphql.ResolverContext{
+		Object: "Category",
+		Args:   nil,
+		Field:  field,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp := ec.FieldMiddleware(ctx, obj, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Category().Boards(rctx, obj)
+	})
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Board)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+
+	arr1 := make(graphql.Array, len(res))
+	var wg sync.WaitGroup
+
+	isLen1 := len(res) == 1
+	if !isLen1 {
+		wg.Add(len(res))
+	}
+
+	for idx1 := range res {
+		idx1 := idx1
+		rctx := &graphql.ResolverContext{
+			Index:  &idx1,
+			Result: res[idx1],
+		}
+		ctx := graphql.WithResolverContext(ctx, rctx)
+		f := func(idx1 int) {
+			if !isLen1 {
+				defer wg.Done()
+			}
+			arr1[idx1] = func() graphql.Marshaler {
+
+				if res[idx1] == nil {
+					return graphql.Null
+				}
+
+				return ec._Board(ctx, field.Selections, res[idx1])
+			}()
+		}
+		if isLen1 {
+			f(idx1)
+		} else {
+			go f(idx1)
+		}
+
+	}
+	wg.Wait()
+	return arr1
+}
+
 var postImplementors = []string{"Post"}
 
 // nolint: gocyclo, errcheck, gas, goconst
@@ -724,6 +917,15 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "categories":
+			wg.Add(1)
+			go func(i int, field graphql.CollectedField) {
+				out.Values[i] = ec._Query_categories(ctx, field)
+				if out.Values[i] == graphql.Null {
+					invalid = true
+				}
+				wg.Done()
+			}(i, field)
 		case "boards":
 			wg.Add(1)
 			go func(i int, field graphql.CollectedField) {
@@ -746,6 +948,76 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		return graphql.Null
 	}
 	return out
+}
+
+// nolint: vetshadow
+func (ec *executionContext) _Query_categories(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer ec.Tracer.EndFieldExecution(ctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := field_Query_categories_args(rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx := &graphql.ResolverContext{
+		Object: "Query",
+		Args:   args,
+		Field:  field,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp := ec.FieldMiddleware(ctx, nil, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Categories(rctx, args["name"].(*string))
+	})
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Category)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+
+	arr1 := make(graphql.Array, len(res))
+	var wg sync.WaitGroup
+
+	isLen1 := len(res) == 1
+	if !isLen1 {
+		wg.Add(len(res))
+	}
+
+	for idx1 := range res {
+		idx1 := idx1
+		rctx := &graphql.ResolverContext{
+			Index:  &idx1,
+			Result: res[idx1],
+		}
+		ctx := graphql.WithResolverContext(ctx, rctx)
+		f := func(idx1 int) {
+			if !isLen1 {
+				defer wg.Done()
+			}
+			arr1[idx1] = func() graphql.Marshaler {
+
+				if res[idx1] == nil {
+					return graphql.Null
+				}
+
+				return ec._Category(ctx, field.Selections, res[idx1])
+			}()
+		}
+		if isLen1 {
+			f(idx1)
+		} else {
+			go f(idx1)
+		}
+
+	}
+	wg.Wait()
+	return arr1
 }
 
 // nolint: vetshadow
@@ -2693,7 +2965,13 @@ func (ec *executionContext) introspectType(name string) *introspection.Type {
 
 var parsedSchema = gqlparser.MustLoadSchema(
 	&ast.Source{Name: "schema.graphql", Input: `type Query {
+	categories(name: String): [Category]!
 	boards(name: String): [Board]!
+}
+
+type Category {
+	name: String!
+	boards: [Board]!
 }
 
 type Board {

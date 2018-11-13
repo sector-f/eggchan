@@ -1,5 +1,11 @@
 type Query {
+	categories(name: String): [Category]!
 	boards(name: String): [Board]!
+}
+
+type Category {
+	name: String!
+	boards: [Board]!
 }
 
 type Board {
