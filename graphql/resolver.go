@@ -156,35 +156,51 @@ func (r *postResolver) Comment(ctx context.Context, obj *Post) (string, error) {
 type queryResolver struct{ *Resolver }
 
 func (r *queryResolver) Categories(ctx context.Context, name *string) ([]*Category, error) {
-	categories, err := r.Service.ListCategories()
-	if err != nil {
-		return nil, err
-	}
-
-	boards, err := r.Service.ListBoards()
-	if err != nil {
-		return nil, err
-	}
-
 	categoryReply := []*Category{}
-	for _, category := range categories {
-		if name == nil || *name == category.Name {
+	if name == nil {
+		categories, err := r.Service.ListCategories()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, category := range categories {
+			boards, err := r.Service.ShowCategory(category.Name)
+			if err != nil {
+				return nil, err
+			}
+
 			boardList := []string{}
 			for _, board := range boards {
-				if board.Category.String == category.Name {
-					boardList = append(boardList, board.Name)
-				}
+				boardList = append(boardList, board.Name)
 			}
+
 			newCategory := Category{
-				name: category.Name,
+				name:   category.Name,
 				boards: boardList,
 			}
+
 			categoryReply = append(categoryReply, &newCategory)
 		}
+	} else {
+		boards, err := r.Service.ShowCategory(*name)
+		if err != nil {
+			return nil, err
+		}
+
+		boardList := []string{}
+		for _, board := range boards {
+			boardList = append(boardList, board.Name)
+		}
+
+		newCategory := Category{
+			name:   *name,
+			boards: boardList,
+		}
+
+		categoryReply = append(categoryReply, &newCategory)
 	}
 
 	return categoryReply, nil
-
 }
 func (r *queryResolver) Boards(ctx context.Context, name *string) ([]*Board, error) {
 	boardReply := []*Board{}
@@ -219,6 +235,12 @@ func (r *queryResolver) Boards(ctx context.Context, name *string) ([]*Board, err
 	}
 
 	return boardReply, nil
+}
+func (r *queryResolver) Threads(ctx context.Context, board string) ([]*Thread, error) {
+	panic("not implemented")
+}
+func (r *queryResolver) Posts(ctx context.Context, board string, thread int) ([]*Post, error) {
+	panic("not implemented")
 }
 
 type threadResolver struct{ *Resolver }

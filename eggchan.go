@@ -16,6 +16,8 @@ type BoardService interface {
 	MakeComment(board string, thread int, comment string, author string) (int, error)
 	ShowBoardDesc(board string) (Board, error)
 	ShowThreadOP(board string, id int) (Thread, error)
+	ShowPostsOnBoard(board string) ([]Post, error)
+	ShowAllPosts() ([]Post, error)
 }
 
 type AdminService interface {

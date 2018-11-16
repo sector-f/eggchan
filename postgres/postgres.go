@@ -153,6 +153,73 @@ func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Pos
 	return posts, nil
 }
 
+func (s *EggchanService) ShowPostsOnBoard(board string) ([]eggchan.Post, error) {
+	c_rows, err := s.DB.Query(
+		`SELECT
+			boards.name,
+			threads.post_num,
+			comments.post_num,
+			comments.author,
+			comments.time,
+			comments.comment
+		FROM comments
+		INNER JOIN threads ON comments.reply_to = threads.id
+		INNER JOIN boards ON boards.id = threads.board_id
+		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		ORDER BY comments.post_num ASC`,
+		board,
+	)
+
+	posts := []eggchan.Post{}
+
+	if err != nil {
+		return posts, err
+	}
+	defer c_rows.Close()
+
+	for c_rows.Next() {
+		var p eggchan.Post
+		if err := c_rows.Scan(&p.Board, &p.ReplyTo, &p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
+			return posts, err
+		}
+		posts = append(posts, p)
+	}
+
+	return posts, nil
+}
+
+func (s *EggchanService) ShowAllPosts() ([]eggchan.Post, error) {
+	c_rows, err := s.DB.Query(
+		`SELECT
+			boards.name,
+			threads.post_num,
+			comments.post_num,
+			comments.author,
+			comments.time,
+			comments.comment
+		FROM comments
+		INNER JOIN threads ON comments.reply_to = threads.id
+		INNER JOIN boards ON boards.id = threads.board_id
+		ORDER BY boards.id ASC, comments.post_num ASC`,
+	)
+
+	posts := []eggchan.Post{}
+
+	if err != nil {
+		return posts, err
+	}
+	defer c_rows.Close()
+
+	for c_rows.Next() {
+		var p eggchan.Post
+		if err := c_rows.Scan(&p.Board, &p.ReplyTo, &p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
+			return posts, err
+		}
+		posts = append(posts, p)
+	}
+
+	return posts, nil
+}
 func (s *EggchanService) MakeThread(board string, comment string, author string, subject string) (int, error) {
 	rows, err := s.DB.Query(
 		`INSERT INTO threads (board_id, comment, author, subject)
