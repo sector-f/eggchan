@@ -32,23 +32,10 @@ func (r *Resolver) Thread() ThreadResolver {
 type boardResolver struct{ *Resolver }
 
 func (r *boardResolver) Name(ctx context.Context, obj *Board) (string, error) {
-	board, err := r.Service.ShowBoardDesc(obj.name)
-	if err != nil {
-		return "", err
-	}
-	return board.Name, nil
+	return obj.name, nil
 }
 func (r *boardResolver) Description(ctx context.Context, obj *Board) (*string, error) {
-	board, err := r.Service.ShowBoardDesc(obj.name)
-	if err != nil {
-		return nil, err
-	}
-
-	if board.Description.Valid {
-		return &board.Description.String, nil
-	} else {
-		return nil, nil
-	}
+	return &obj.description, nil
 }
 func (r *boardResolver) Category(ctx context.Context, obj *Board) (*string, error) {
 	board, err := r.Service.ShowBoardDesc(obj.name)
@@ -273,60 +260,25 @@ func (r *queryResolver) Thread(ctx context.Context, board string, id int) (Threa
 type threadResolver struct{ *Resolver }
 
 func (r *threadResolver) PostNum(ctx context.Context, obj *Thread) (int, error) {
-	thread, err := r.Service.ShowThreadOP(obj.board, obj.postNum)
-	if err != nil {
-		return 0, err
-	}
-
-	return thread.PostNum, nil
+	return obj.postNum, nil
 }
 func (r *threadResolver) Subject(ctx context.Context, obj *Thread) (*string, error) {
-	thread, err := r.Service.ShowThreadOP(obj.board, obj.postNum)
-	if err != nil {
-		return nil, err
-	}
-
-	return &thread.Subject.String, nil
+	return &obj.subject, nil
 }
 func (r *threadResolver) Author(ctx context.Context, obj *Thread) (string, error) {
-	thread, err := r.Service.ShowThreadOP(obj.board, obj.postNum)
-	if err != nil {
-		return "", err
-	}
-
-	return thread.Author, nil
+	return obj.author, nil
 }
 func (r *threadResolver) Time(ctx context.Context, obj *Thread) (time.Time, error) {
-	thread, err := r.Service.ShowThreadOP(obj.board, obj.postNum)
-	if err != nil {
-		return time.Now(), err
-	}
-
-	return thread.Time, nil
+	return obj.time, nil
 }
 func (r *threadResolver) NumReplies(ctx context.Context, obj *Thread) (int, error) {
-	thread, err := r.Service.ShowThreadOP(obj.board, obj.postNum)
-	if err != nil {
-		return 0, err
-	}
-
-	return thread.NumReplies, nil
+	return obj.numReplies, nil
 }
 func (r *threadResolver) LatestReplyTime(ctx context.Context, obj *Thread) (time.Time, error) {
-	thread, err := r.Service.ShowThreadOP(obj.board, obj.postNum)
-	if err != nil {
-		return time.Now(), err
-	}
-
-	return thread.SortLatestReply, nil
+	return obj.latestReplyTime, nil
 }
 func (r *threadResolver) Comment(ctx context.Context, obj *Thread) (string, error) {
-	thread, err := r.Service.ShowThreadOP(obj.board, obj.postNum)
-	if err != nil {
-		return "", err
-	}
-
-	return thread.Comment, nil
+	return obj.comment, nil
 }
 func (r *threadResolver) Posts(ctx context.Context, obj *Thread) ([]*Post, error) {
 	posts, err := r.Service.ShowThread(obj.board, obj.postNum)
