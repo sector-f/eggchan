@@ -128,16 +128,16 @@ func (r *categoryResolver) Boards(ctx context.Context, obj *Category) ([]*Board,
 type postResolver struct{ *Resolver }
 
 func (r *postResolver) Board(ctx context.Context, obj *Post) (string, error) {
-	panic("not implemented")
+	return obj.board, nil
 }
 func (r *postResolver) PostNum(ctx context.Context, obj *Post) (int, error) {
-	panic("not implemented")
+	return obj.postNum, nil
 }
 func (r *postResolver) Author(ctx context.Context, obj *Post) (string, error) {
-	panic("not implemented")
+	return obj.author, nil
 }
 func (r *postResolver) Time(ctx context.Context, obj *Post) (time.Time, error) {
-	panic("not implemented")
+	return obj.time, nil
 }
 func (r *postResolver) Comment(ctx context.Context, obj *Post) (string, error) {
 	return obj.comment, nil
