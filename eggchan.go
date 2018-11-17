@@ -18,6 +18,7 @@ type BoardService interface {
 	ShowThreadOP(board string, id int) (Thread, error)
 	ShowPostsOnBoard(board string) ([]Post, error)
 	ShowAllPosts() ([]Post, error)
+	ShowPost(board string, id int) (Post, error)
 }
 
 type AdminService interface {
@@ -60,7 +61,7 @@ type Thread struct {
 
 type Post struct {
 	Board   string    `json:"board"`
-	ReplyTo int       `json:"post_num"`
+	ReplyTo int       `json:"-"`
 	PostNum int       `json:"post_num"`
 	Author  string    `json:"author"`
 	Time    time.Time `json:"time"`

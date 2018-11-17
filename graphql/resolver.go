@@ -140,6 +140,9 @@ func (r *categoryResolver) Boards(ctx context.Context, obj *Category) ([]*Board,
 
 type postResolver struct{ *Resolver }
 
+func (r *postResolver) Board(ctx context.Context, obj *Post) (string, error) {
+	panic("not implemented")
+}
 func (r *postResolver) PostNum(ctx context.Context, obj *Post) (int, error) {
 	panic("not implemented")
 }
@@ -150,7 +153,7 @@ func (r *postResolver) Time(ctx context.Context, obj *Post) (time.Time, error) {
 	panic("not implemented")
 }
 func (r *postResolver) Comment(ctx context.Context, obj *Post) (string, error) {
-	panic("not implemented")
+	return obj.comment, nil
 }
 
 type queryResolver struct{ *Resolver }
@@ -236,11 +239,35 @@ func (r *queryResolver) Boards(ctx context.Context, name *string) ([]*Board, err
 
 	return boardReply, nil
 }
-func (r *queryResolver) Threads(ctx context.Context, board string) ([]*Thread, error) {
-	panic("not implemented")
-}
-func (r *queryResolver) Posts(ctx context.Context, board string, thread int) ([]*Post, error) {
-	panic("not implemented")
+func (r *queryResolver) Thread(ctx context.Context, board string, id int) (Thread, error) {
+	thread, err := r.Service.ShowThreadOP(board, id)
+	if err != nil {
+		return Thread{}, err
+	}
+
+	posts, err := r.Service.ShowThread(board, id)
+	if err != nil {
+		return Thread{}, err
+	}
+
+	postNums := []int{}
+	for _, post := range posts {
+		postNums = append(postNums, post.PostNum)
+	}
+
+	threadReply := Thread{
+		board: thread.Board,
+		postNum: thread.PostNum,
+		subject: thread.Subject.String,
+		author: thread.Author,
+		time: thread.Time,
+		numReplies: thread.NumReplies,
+		latestReplyTime: thread.SortLatestReply,
+		comment: thread.Comment,
+		posts: postNums,
+	}
+
+	return threadReply, nil
 }
 
 type threadResolver struct{ *Resolver }
@@ -302,5 +329,23 @@ func (r *threadResolver) Comment(ctx context.Context, obj *Thread) (string, erro
 	return thread.Comment, nil
 }
 func (r *threadResolver) Posts(ctx context.Context, obj *Thread) ([]*Post, error) {
-	panic("not implemented")
+	posts, err := r.Service.ShowThread(obj.board, obj.postNum)
+	if err != nil {
+		return nil, err
+	}
+
+	postReply := []*Post{}
+	for _, post := range posts {
+		newPost := Post{
+			board: post.Board,
+			postNum: post.PostNum,
+			author: post.Author,
+			time: post.Time,
+			comment: post.Comment,
+		}
+
+		postReply = append(postReply, &newPost)
+	}
+
+	return postReply, nil
 }

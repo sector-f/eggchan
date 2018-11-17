@@ -27,6 +27,7 @@ type Thread struct {
 }
 
 type Post struct {
+	board string
 	postNum int
 	author  string
 	time    time.Time

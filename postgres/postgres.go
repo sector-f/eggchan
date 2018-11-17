@@ -628,3 +628,47 @@ func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, err
 
 	return t, nil
 }
+
+// type Post struct {
+// 	Board   string    `json:"board"`
+// 	ReplyTo int       `json:"-"`
+// 	PostNum int       `json:"post_num"`
+// 	Author  string    `json:"author"`
+// 	Time    time.Time `json:"time"`
+// 	Comment string    `json:"comment"`
+// }
+
+// CREATE TABLE IF NOT EXISTS comments (
+// 	id SERIAL PRIMARY KEY,
+// 	author TEXT DEFAULT 'Anonymous',
+// 	post_num INTEGER,
+// 	reply_to INTEGER REFERENCES threads ON DELETE CASCADE,
+// 	image INTEGER REFERENCES images,
+// 	time TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
+// 	comment TEXT NOT NULL
+// );
+
+func (s *EggchanService) ShowPost(board string, id int) (eggchan.Post, error) {
+	p_row := s.DB.QueryRow(
+		`SELECT
+			boards.name,
+			comments.reply_to,
+			comments.post_num,
+			comments.author,
+			comments.time,
+			comments.comment
+		FROM comments
+		INNER JOIN threads ON threads.id = comments.reply_to
+		INNER JOIN boards ON boards.id = threads.board_id
+		WHERE boards.name = $1 AND comments.post_num = $2`,
+		board,
+		id,
+	)
+
+	var p eggchan.Post
+	if err := p_row.Scan(&p.Board, &p.ReplyTo, &p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
+		return p, err
+	}
+
+	return p, nil
+}

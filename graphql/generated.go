@@ -64,8 +64,7 @@ type ComplexityRoot struct {
 	Query struct {
 		Categories func(childComplexity int, name *string) int
 		Boards     func(childComplexity int, name *string) int
-		Threads    func(childComplexity int, board string) int
-		Posts      func(childComplexity int, board string, thread int) int
+		Thread     func(childComplexity int, board string, thread int) int
 	}
 
 	Thread struct {
@@ -99,8 +98,7 @@ type PostResolver interface {
 type QueryResolver interface {
 	Categories(ctx context.Context, name *string) ([]*Category, error)
 	Boards(ctx context.Context, name *string) ([]*Board, error)
-	Threads(ctx context.Context, board string) ([]*Thread, error)
-	Posts(ctx context.Context, board string, thread int) ([]*Post, error)
+	Thread(ctx context.Context, board string, thread int) (Thread, error)
 }
 type ThreadResolver interface {
 	PostNum(ctx context.Context, obj *Thread) (int, error)
@@ -153,22 +151,7 @@ func field_Query_boards_args(rawArgs map[string]interface{}) (map[string]interfa
 
 }
 
-func field_Query_threads_args(rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["board"]; ok {
-		var err error
-		arg0, err = graphql.UnmarshalString(tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["board"] = arg0
-	return args, nil
-
-}
-
-func field_Query_posts_args(rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func field_Query_thread_args(rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	args := map[string]interface{}{}
 	var arg0 string
 	if tmp, ok := rawArgs["board"]; ok {
@@ -344,29 +327,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Boards(childComplexity, args["name"].(*string)), true
 
-	case "Query.threads":
-		if e.complexity.Query.Threads == nil {
+	case "Query.thread":
+		if e.complexity.Query.Thread == nil {
 			break
 		}
 
-		args, err := field_Query_threads_args(rawArgs)
+		args, err := field_Query_thread_args(rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.Threads(childComplexity, args["board"].(string)), true
-
-	case "Query.posts":
-		if e.complexity.Query.Posts == nil {
-			break
-		}
-
-		args, err := field_Query_posts_args(rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Posts(childComplexity, args["board"].(string), args["thread"].(int)), true
+		return e.complexity.Query.Thread(childComplexity, args["board"].(string), args["thread"].(int)), true
 
 	case "Thread.postNum":
 		if e.complexity.Thread.PostNum == nil {
@@ -1002,19 +973,10 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				wg.Done()
 			}(i, field)
-		case "threads":
+		case "thread":
 			wg.Add(1)
 			go func(i int, field graphql.CollectedField) {
-				out.Values[i] = ec._Query_threads(ctx, field)
-				if out.Values[i] == graphql.Null {
-					invalid = true
-				}
-				wg.Done()
-			}(i, field)
-		case "posts":
-			wg.Add(1)
-			go func(i int, field graphql.CollectedField) {
-				out.Values[i] = ec._Query_posts(ctx, field)
+				out.Values[i] = ec._Query_thread(ctx, field)
 				if out.Values[i] == graphql.Null {
 					invalid = true
 				}
@@ -1176,11 +1138,11 @@ func (ec *executionContext) _Query_boards(ctx context.Context, field graphql.Col
 }
 
 // nolint: vetshadow
-func (ec *executionContext) _Query_threads(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
+func (ec *executionContext) _Query_thread(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer ec.Tracer.EndFieldExecution(ctx)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := field_Query_threads_args(rawArgs)
+	args, err := field_Query_thread_args(rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -1194,7 +1156,7 @@ func (ec *executionContext) _Query_threads(ctx context.Context, field graphql.Co
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp := ec.FieldMiddleware(ctx, nil, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Threads(rctx, args["board"].(string))
+		return ec.resolvers.Query().Thread(rctx, args["board"].(string), args["thread"].(int))
 	})
 	if resTmp == nil {
 		if !ec.HasError(rctx) {
@@ -1202,117 +1164,11 @@ func (ec *executionContext) _Query_threads(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*Thread)
+	res := resTmp.(Thread)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 
-	arr1 := make(graphql.Array, len(res))
-	var wg sync.WaitGroup
-
-	isLen1 := len(res) == 1
-	if !isLen1 {
-		wg.Add(len(res))
-	}
-
-	for idx1 := range res {
-		idx1 := idx1
-		rctx := &graphql.ResolverContext{
-			Index:  &idx1,
-			Result: res[idx1],
-		}
-		ctx := graphql.WithResolverContext(ctx, rctx)
-		f := func(idx1 int) {
-			if !isLen1 {
-				defer wg.Done()
-			}
-			arr1[idx1] = func() graphql.Marshaler {
-
-				if res[idx1] == nil {
-					return graphql.Null
-				}
-
-				return ec._Thread(ctx, field.Selections, res[idx1])
-			}()
-		}
-		if isLen1 {
-			f(idx1)
-		} else {
-			go f(idx1)
-		}
-
-	}
-	wg.Wait()
-	return arr1
-}
-
-// nolint: vetshadow
-func (ec *executionContext) _Query_posts(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer ec.Tracer.EndFieldExecution(ctx)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := field_Query_posts_args(rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	rctx := &graphql.ResolverContext{
-		Object: "Query",
-		Args:   args,
-		Field:  field,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp := ec.FieldMiddleware(ctx, nil, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Posts(rctx, args["board"].(string), args["thread"].(int))
-	})
-	if resTmp == nil {
-		if !ec.HasError(rctx) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*Post)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-
-	arr1 := make(graphql.Array, len(res))
-	var wg sync.WaitGroup
-
-	isLen1 := len(res) == 1
-	if !isLen1 {
-		wg.Add(len(res))
-	}
-
-	for idx1 := range res {
-		idx1 := idx1
-		rctx := &graphql.ResolverContext{
-			Index:  &idx1,
-			Result: res[idx1],
-		}
-		ctx := graphql.WithResolverContext(ctx, rctx)
-		f := func(idx1 int) {
-			if !isLen1 {
-				defer wg.Done()
-			}
-			arr1[idx1] = func() graphql.Marshaler {
-
-				if res[idx1] == nil {
-					return graphql.Null
-				}
-
-				return ec._Post(ctx, field.Selections, res[idx1])
-			}()
-		}
-		if isLen1 {
-			f(idx1)
-		} else {
-			go f(idx1)
-		}
-
-	}
-	wg.Wait()
-	return arr1
+	return ec._Thread(ctx, field.Selections, &res)
 }
 
 // nolint: vetshadow
@@ -3192,8 +3048,7 @@ var parsedSchema = gqlparser.MustLoadSchema(
 	&ast.Source{Name: "schema.graphql", Input: `type Query {
 	categories(name: String): [Category]!
 	boards(name: String): [Board]!
-	threads(board: String!): [Thread]!
-	posts(board: String!, thread: Int!): [Post]!
+	thread(board: String!, thread: Int!): Thread!
 }
 
 type Category {

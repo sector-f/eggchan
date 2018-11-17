@@ -1,8 +1,7 @@
 type Query {
 	categories(name: String): [Category]!
 	boards(name: String): [Board]!
-	threads(board: String!): [Thread]!
-	posts(board: String!, thread: Int!): [Post]!
+	thread(board: String!, thread: Int!): Thread!
 }
 
 type Category {
@@ -29,6 +28,7 @@ type Thread {
 }
 
 type Post {
+	board: String!
 	postNum: Int!
 	author: String!
 	time: Time!
