@@ -77,6 +77,7 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 	rows, err := s.DB.Query(
 		`SELECT
+			$1,
 			threads.post_num,
 			threads.subject,
 			threads.author,
@@ -105,7 +106,7 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 
 	for rows.Next() {
 		var t eggchan.Thread
-		if err := rows.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
+		if err := rows.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
 			return threads, err
 		}
 		threads = append(threads, t)
@@ -522,6 +523,7 @@ func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
 func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, error) {
 	t_row := s.DB.QueryRow(
 		`SELECT
+			$1,
 			threads.post_num,
 			threads.subject,
 			threads.author,
@@ -544,7 +546,7 @@ func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, err
 	)
 
 	var t eggchan.Thread
-	if err := t_row.Scan(&t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
+	if err := t_row.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
 		return t, err
 	}
 
