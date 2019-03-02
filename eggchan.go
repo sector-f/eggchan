@@ -55,6 +55,16 @@ type Thread struct {
 	Comment         string      `json:"comment"`
 }
 
+type BoardReply struct {
+	Board   Board    `json:"board"`
+	Threads []Thread `json:"threads"`
+}
+
+type ThreadReply struct {
+	Thread Thread `json:"op"`
+	Posts  []Post `json:"posts"`
+}
+
 type Post struct {
 	PostNum int       `json:"post_num"`
 	Author  string    `json:"author"`

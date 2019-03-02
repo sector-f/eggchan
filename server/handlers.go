@@ -6,19 +6,9 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/sector-f/eggchan"
 	"github.com/lib/pq"
+	"github.com/sector-f/eggchan"
 )
-
-type boardReply struct {
-	Board   eggchan.Board    `json:"board"`
-	Threads []eggchan.Thread `json:"threads"`
-}
-
-type threadReply struct {
-	Thread eggchan.Thread `json:"op"`
-	Posts  []eggchan.Post `json:"posts"`
-}
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotFound, "Not found")
@@ -63,7 +53,7 @@ func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, boardReply{board, posts})
+	respondWithJSON(w, http.StatusOK, eggchan.BoardReply{board, posts})
 }
 
 func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +78,7 @@ func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, threadReply{op, posts})
+	respondWithJSON(w, http.StatusOK, eggchan.ThreadReply{op, posts})
 }
 
 func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
