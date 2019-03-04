@@ -117,7 +117,7 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 
 func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Post, error) {
 	c_rows, err := s.DB.Query(
-		`SELECT comments.post_num, comments.author, comments.time, comments.comment
+		`SELECT comments.reply_to, comments.post_num, comments.author, comments.time, comments.comment
 		FROM comments
 		INNER JOIN threads ON comments.reply_to = threads.id
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
@@ -136,7 +136,7 @@ func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Pos
 
 	for c_rows.Next() {
 		var p eggchan.Post
-		if err := c_rows.Scan(&p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
+		if err := c_rows.Scan(&p.ReplyTo, &p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
 			return posts, err
 		}
 		posts = append(posts, p)

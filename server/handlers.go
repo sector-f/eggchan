@@ -58,7 +58,13 @@ func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 
 func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	board := vars["board"]
+	boardName := vars["board"]
+
+	board, err := e.BoardService.ShowBoardDesc(boardName)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid board")
+		return
+	}
 
 	thread, err := strconv.Atoi(vars["thread"])
 	if err != nil {
@@ -66,19 +72,19 @@ func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	op, err := e.BoardService.ShowThreadOP(board, thread)
+	op, err := e.BoardService.ShowThreadOP(boardName, thread)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
 		return
 	}
 
-	posts, err := e.BoardService.ShowThread(board, thread)
+	posts, err := e.BoardService.ShowThread(boardName, thread)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, eggchan.ThreadReply{op, posts})
+	respondWithJSON(w, http.StatusOK, eggchan.ThreadReply{board, op, posts})
 }
 
 func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +128,7 @@ func (e *HttpServer) postThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, map[string]int{"post_num": post_num})
+	respondWithJSON(w, http.StatusCreated, eggchan.PostThreadResponse{post_num})
 }
 
 func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +169,7 @@ func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, map[string]int{"post_num": post_num})
+	respondWithJSON(w, http.StatusCreated, eggchan.PostCommentResponse{thread, post_num})
 }
 
 func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {

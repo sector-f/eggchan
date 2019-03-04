@@ -62,11 +62,13 @@ type BoardReply struct {
 }
 
 type ThreadReply struct {
+	Board  Board  `json:"board"`
 	Thread Thread `json:"op"`
 	Posts  []Post `json:"posts"`
 }
 
 type Post struct {
+	ReplyTo int       `json:"reply_to"`
 	PostNum int       `json:"post_num"`
 	Author  string    `json:"author"`
 	Time    time.Time `json:"time"`
@@ -80,4 +82,13 @@ type User struct {
 
 type Permission struct {
 	Name string
+}
+
+type PostThreadResponse struct {
+	PostNum int `json:"post_num"`
+}
+
+type PostCommentResponse struct {
+	ReplyTo int `json:"reply_to"`
+	PostNum int `json:"post_num"`
 }
