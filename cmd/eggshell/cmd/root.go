@@ -32,6 +32,7 @@ var completer = readline.NewPrefixCompleter(
 	readline.PcItem("list-permissions"),
 	readline.PcItem("add-board"),
 	readline.PcItem("list-boards"),
+	readline.PcItem("list-categories"),
 	readline.PcItem("help"),
 	readline.PcItem("exit"),
 )
@@ -137,6 +138,8 @@ func runCommand(arguments []string) (break_loop bool) {
 		command = addBoardCommand()
 	case "list-boards":
 		command = listBoardsCommand()
+	case "list-categories":
+		command = listCategoriesCommand()
 	case "help":
 		commands := []string{
 			"add-user",
