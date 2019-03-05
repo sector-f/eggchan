@@ -77,7 +77,7 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 	rows, err := s.DB.Query(
 		`SELECT
-			$1,
+			$1::text,
 			threads.post_num,
 			threads.subject,
 			threads.author,
@@ -536,7 +536,7 @@ func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
 func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, error) {
 	t_row := s.DB.QueryRow(
 		`SELECT
-			$1,
+			$1::text,
 			threads.post_num,
 			threads.subject,
 			threads.author,
