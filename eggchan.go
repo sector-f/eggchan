@@ -20,6 +20,7 @@ type BoardService interface {
 
 type AdminService interface {
 	AddBoard(board, description, category string) error
+	AddCategory(category string) error
 	DeleteThread(board string, thread int) (int64, error)
 	DeleteComment(board string, thread int) (int64, error)
 }

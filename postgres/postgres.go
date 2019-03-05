@@ -440,6 +440,19 @@ func (s *EggchanService) ListPermissions() ([]eggchan.Permission, error) {
 	return perms, nil
 }
 
+func (s *EggchanService) AddCategory(category string) error {
+	_, err := s.DB.Exec(
+		`INSERT INTO categories (name) VALUES ($1)`,
+		category,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *EggchanService) AddBoard(board, description, category string) error {
 	var d sql.NullString
 	if description == "" {
