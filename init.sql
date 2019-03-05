@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE TABLE IF NOT EXISTS boards (
 	id SERIAL PRIMARY KEY,
 	name TEXT UNIQUE NOT NULL,
-	description TEXT,
-	category INTEGER REFERENCES categories,
+	description TEXT NOT NULL,
+	category INTEGER NOT NULL REFERENCES categories,
 	bump_limit INTEGER NOT NULL DEFAULT 300,
 	post_limit INTEGER NOT NULL DEFAULT 500,
 	max_num_threads INTEGER NOT NULL DEFAULT 30
@@ -21,19 +21,12 @@ CREATE TABLE IF NOT EXISTS board_postnum (
 	postnum INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS images (
-	id SERIAL PRIMARY KEY,
-	filepath TEXT NOT NULL,
-	thumbpath TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS threads (
 	id SERIAL PRIMARY KEY,
 	subject TEXT,
 	author TEXT DEFAULT 'Anonymous',
 	post_num INTEGER,
 	board_id INTEGER REFERENCES boards,
-	image INTEGER REFERENCES images,
 	time TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
 	comment TEXT NOT NULL
 );
@@ -43,7 +36,6 @@ CREATE TABLE IF NOT EXISTS comments (
 	author TEXT DEFAULT 'Anonymous',
 	post_num INTEGER,
 	reply_to INTEGER REFERENCES threads ON DELETE CASCADE,
-	image INTEGER REFERENCES images,
 	time TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
 	comment TEXT NOT NULL
 );
