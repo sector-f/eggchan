@@ -152,8 +152,9 @@ func runCommand(arguments []string) (break_loop bool) {
 			"revoke-permissions",
 			"list-permissions",
 			"add-board",
-			"add-category",
 			"list-boards",
+			"add-category",
+			"list-categories",
 			"help",
 			"exit",
 		}
