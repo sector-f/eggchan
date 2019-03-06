@@ -1,5 +1,9 @@
-INSERT INTO boards (name) VALUES ('diy');
-INSERT INTO boards (name) VALUES ('out');
+BEGIN;
+
+INSERT INTO categories (name) VALUES ('Hobbies');
+
+INSERT INTO boards (name, description, category) VALUES ('diy', 'Do-It-Yourself', 1);
+INSERT INTO boards (name, description, category) VALUES ('out', 'Outdoors', 1);
 
 INSERT INTO threads (board_id, comment) VALUES (1, 'first thread on diy');
 INSERT INTO threads (board_id, comment) VALUES (2, 'first thread on out');
@@ -17,3 +21,5 @@ INSERT INTO user_permissions (user_id, permission) VALUES
 	((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM permissions WHERE name = 'delete_board')),
 	((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM permissions WHERE name = 'delete_thread')),
 	((SELECT id FROM users WHERE username = 'admin'), (SELECT id FROM permissions WHERE name = 'delete_post'));
+
+COMMIT;

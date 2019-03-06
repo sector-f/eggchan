@@ -3,7 +3,9 @@ package server
 import (
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/sector-f/eggchan"
 )
@@ -52,7 +54,7 @@ func (s *HttpServer) Initialize() {
 			handler = s.auth(handler, route.Permission)
 		}
 
-		handler = Logger(handler)
+		handler = handlers.LoggingHandler(os.Stdout, handlers.ProxyHeaders(handler))
 		router.Methods(route.Method).Path(route.Pattern).Handler(handler)
 	}
 
