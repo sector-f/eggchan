@@ -37,7 +37,8 @@ type AuthService interface {
 }
 
 type Category struct {
-	Name string `json:"name"`
+	Name   string  `json:"name"`
+	Boards []Board `json:"boards"`
 }
 
 type Board struct {

@@ -13,20 +13,37 @@ type EggchanService struct {
 }
 
 func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
-	rows, err := s.DB.Query("SELECT name FROM categories ORDER BY name ASC")
+	catRows, err := s.DB.Query("SELECT name FROM categories ORDER BY name ASC")
 
 	if err != nil {
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer catRows.Close()
 
 	categories := []eggchan.Category{}
-	for rows.Next() {
+	for catRows.Next() {
 		var c eggchan.Category
-		if err := rows.Scan(&c.Name); err != nil {
+		if err := catRows.Scan(&c.Name); err != nil {
 			return nil, err
 		}
+
+		boardRows, err := s.DB.Query("SELECT b.name, b.description, $1::text FROM boards b INNER JOIN categories c ON c.id = b.category WHERE c.name = $1::text", c.Name)
+		if err != nil {
+			return nil, err
+		}
+		defer boardRows.Close()
+
+		boards := []eggchan.Board{}
+		for boardRows.Next() {
+			var b eggchan.Board
+			if err := boardRows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
+				return nil, err
+			}
+			boards = append(boards, b)
+		}
+
+		c.Boards = boards
 		categories = append(categories, c)
 	}
 
