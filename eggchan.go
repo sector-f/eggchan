@@ -42,9 +42,9 @@ type Category struct {
 }
 
 type Board struct {
-	Name        string      `json:"name"`
-	Description null.String `json:"description"`
-	Category    null.String `json:"category"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Category    string `json:"category"`
 }
 
 type Thread struct {
