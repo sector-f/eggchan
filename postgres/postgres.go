@@ -20,7 +20,6 @@ func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 	defer tx.Commit()
 
 	catRows, err := tx.Query("SELECT name FROM categories ORDER BY name ASC")
-
 	if err != nil {
 		return nil, err
 	}
@@ -59,13 +58,16 @@ func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 }
 
 func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
-	rows, err := s.DB.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id ORDER BY boards.name ASC")
-
+	tx, err := s.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Commit()
 
-	defer rows.Close()
+	rows, err := tx.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id ORDER BY boards.name ASC")
+	if err != nil {
+		return nil, err
+	}
 
 	boards := []eggchan.Board{}
 	for rows.Next() {
@@ -75,6 +77,7 @@ func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
 		}
 		boards = append(boards, b)
 	}
+	rows.Close()
 
 	return boards, nil
 }
