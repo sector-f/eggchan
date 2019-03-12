@@ -108,7 +108,13 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 }
 
 func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
-	rows, err := s.DB.Query(
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
+
+	rows, err := tx.Query(
 		`SELECT
 			$1::text,
 			threads.post_num,
@@ -129,14 +135,11 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 		ORDER BY sort_latest_reply DESC`,
 		name,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	threads := []eggchan.Thread{}
-
-	if err != nil {
-		return threads, err
-	}
-	defer rows.Close()
-
 	for rows.Next() {
 		var t eggchan.Thread
 		if err := rows.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
@@ -144,12 +147,19 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 		}
 		threads = append(threads, t)
 	}
+	rows.Close()
 
 	return threads, nil
 }
 
 func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Post, error) {
-	c_rows, err := s.DB.Query(
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
+
+	c_rows, err := tx.Query(
 		`SELECT comments.reply_to, comments.post_num, comments.author, comments.time, comments.comment
 		FROM comments
 		INNER JOIN threads ON comments.reply_to = threads.id
@@ -159,14 +169,11 @@ func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Pos
 		board,
 		thread_num,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	posts := []eggchan.Post{}
-
-	if err != nil {
-		return posts, err
-	}
-	defer c_rows.Close()
-
 	for c_rows.Next() {
 		var p eggchan.Post
 		if err := c_rows.Scan(&p.ReplyTo, &p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
@@ -174,12 +181,19 @@ func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Pos
 		}
 		posts = append(posts, p)
 	}
+	c_rows.Close()
 
 	return posts, nil
 }
 
 func (s *EggchanService) MakeThread(board string, comment string, author string, subject string) (int, error) {
-	rows, err := s.DB.Query(
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Commit()
+
+	row := tx.QueryRow(
 		`INSERT INTO threads (board_id, comment, author, subject)
 		VALUES(
 			(SELECT id FROM boards WHERE name = $1),
@@ -194,25 +208,22 @@ func (s *EggchanService) MakeThread(board string, comment string, author string,
 		subject,
 	)
 
-	if err != nil {
+	var post_num int
+	if err := row.Scan(&post_num); err != nil {
 		return 0, err
 	}
 
-	post_nums := []int{}
-	for rows.Next() {
-		var i int
-		if err := rows.Scan(&i); err != nil {
-			return 0, err
-		}
-		post_nums = append(post_nums, i)
-	}
-
-	return post_nums[0], nil
+	return post_num, nil
 }
 
 func (s *EggchanService) MakeComment(board string, thread int, comment string, author string) (int, error) {
-	// TODO: use QueryRow here
-	rows, err := s.DB.Query(
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Commit()
+
+	row := tx.QueryRow(
 		`INSERT INTO comments (reply_to, comment, author)
 		VALUES(
 			(SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2),
@@ -226,20 +237,12 @@ func (s *EggchanService) MakeComment(board string, thread int, comment string, a
 		author,
 	)
 
-	if err != nil {
+	var post_num int
+	if err := row.Scan(&post_num); err != nil {
 		return 0, err
 	}
 
-	post_nums := []int{}
-	for rows.Next() {
-		var i int
-		if err := rows.Scan(&i); err != nil {
-			return 0, err
-		}
-		post_nums = append(post_nums, i)
-	}
-
-	return post_nums[0], nil
+	return post_num, nil
 }
 
 func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
