@@ -83,12 +83,16 @@ func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
 }
 
 func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
+
 	rows, err := s.DB.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1 ORDER BY boards.name ASC", name)
 	if err != nil {
 		return nil, err
 	}
-
-	defer rows.Close()
 
 	boards := []eggchan.Board{}
 	for rows.Next() {
@@ -98,6 +102,7 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 		}
 		boards = append(boards, b)
 	}
+	rows.Close()
 
 	return boards, nil
 }
