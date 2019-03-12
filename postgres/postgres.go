@@ -13,13 +13,17 @@ type EggchanService struct {
 }
 
 func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
-	catRows, err := s.DB.Query("SELECT name FROM categories ORDER BY name ASC")
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
+
+	catRows, err := tx.Query("SELECT name FROM categories ORDER BY name ASC")
 
 	if err != nil {
 		return nil, err
 	}
-
-	defer catRows.Close()
 
 	categories := []eggchan.Category{}
 	for catRows.Next() {
@@ -28,11 +32,15 @@ func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 			return nil, err
 		}
 
-		boardRows, err := s.DB.Query("SELECT b.name, b.description, $1::text FROM boards b INNER JOIN categories c ON c.id = b.category WHERE c.name = $1::text", c.Name)
+		categories = append(categories, c)
+	}
+	catRows.Close()
+
+	for i, category := range categories {
+		boardRows, err := tx.Query("SELECT b.name, b.description, $1::text FROM boards b INNER JOIN categories c ON c.id = b.category WHERE c.name = $1::text", category.Name)
 		if err != nil {
 			return nil, err
 		}
-		defer boardRows.Close()
 
 		boards := []eggchan.Board{}
 		for boardRows.Next() {
@@ -42,9 +50,9 @@ func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 			}
 			boards = append(boards, b)
 		}
+		boardRows.Close()
 
-		c.Boards = boards
-		categories = append(categories, c)
+		categories[i].Boards = boards
 	}
 
 	return categories, nil
