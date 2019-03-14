@@ -203,8 +203,7 @@ func (s *EggchanService) MakeThread(board string, comment string, author string,
 }
 
 func (s *EggchanService) MakeComment(board string, thread int, comment string, author string) (int, error) {
-	// TODO: use QueryRow here
-	rows, err := s.DB.Query(
+	row := s.DB.QueryRow(
 		`INSERT INTO comments (reply_to, comment, author)
 		VALUES(
 			(SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2),
@@ -218,20 +217,12 @@ func (s *EggchanService) MakeComment(board string, thread int, comment string, a
 		author,
 	)
 
-	if err != nil {
+	var post_num int
+	if err := row.Scan(&post_num); err != nil {
 		return 0, err
 	}
 
-	post_nums := []int{}
-	for rows.Next() {
-		var i int
-		if err := rows.Scan(&i); err != nil {
-			return 0, err
-		}
-		post_nums = append(post_nums, i)
-	}
-
-	return post_nums[0], nil
+	return post_num, nil
 }
 
 func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
