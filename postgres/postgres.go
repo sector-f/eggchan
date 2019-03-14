@@ -359,9 +359,13 @@ func (s *EggchanService) DeleteUser(user string) error {
 }
 
 func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
-	userList := []eggchan.User{}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
 
-	rows, err := s.DB.Query(`SELECT username FROM users ORDER BY id ASC`)
+	userList := []eggchan.User{}
+	rows, err := tx.Query(`SELECT username FROM users ORDER BY id ASC`)
 	if err != nil {
 		return userList, err
 	}
@@ -373,9 +377,10 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 		}
 		userList = append(userList, eggchan.User{u, []string{}})
 	}
+	rows.Close()
 
 	for i, user := range userList {
-		rows, err = s.DB.Query(
+		rows, err = tx.Query(
 			`SELECT name FROM permissions p
 			INNER JOIN user_permissions up ON p.id = up.permission
 			INNER JOIN users u ON u.id = up.user_id
@@ -395,6 +400,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 			}
 			permissions = append(permissions, p)
 		}
+		rows.Close()
 
 		userList[i].Perms = permissions
 	}
