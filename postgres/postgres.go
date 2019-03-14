@@ -13,13 +13,17 @@ type EggchanService struct {
 }
 
 func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
-	catRows, err := s.DB.Query("SELECT name FROM categories ORDER BY name ASC")
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
+
+	catRows, err := tx.Query("SELECT name FROM categories ORDER BY name ASC")
 
 	if err != nil {
 		return nil, err
 	}
-
-	defer catRows.Close()
 
 	categories := []eggchan.Category{}
 	for catRows.Next() {
@@ -28,11 +32,15 @@ func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 			return nil, err
 		}
 
-		boardRows, err := s.DB.Query("SELECT b.name, b.description, $1::text FROM boards b INNER JOIN categories c ON c.id = b.category WHERE c.name = $1::text", c.Name)
+		categories = append(categories, c)
+	}
+	catRows.Close()
+
+	for i, category := range categories {
+		boardRows, err := tx.Query("SELECT b.name, b.description, $1::text FROM boards b INNER JOIN categories c ON c.id = b.category WHERE c.name = $1::text", category.Name)
 		if err != nil {
 			return nil, err
 		}
-		defer boardRows.Close()
 
 		boards := []eggchan.Board{}
 		for boardRows.Next() {
@@ -42,9 +50,9 @@ func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 			}
 			boards = append(boards, b)
 		}
+		boardRows.Close()
 
-		c.Boards = boards
-		categories = append(categories, c)
+		categories[i].Boards = boards
 	}
 
 	return categories, nil
@@ -195,8 +203,7 @@ func (s *EggchanService) MakeThread(board string, comment string, author string,
 }
 
 func (s *EggchanService) MakeComment(board string, thread int, comment string, author string) (int, error) {
-	// TODO: use QueryRow here
-	rows, err := s.DB.Query(
+	row := s.DB.QueryRow(
 		`INSERT INTO comments (reply_to, comment, author)
 		VALUES(
 			(SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2),
@@ -210,20 +217,12 @@ func (s *EggchanService) MakeComment(board string, thread int, comment string, a
 		author,
 	)
 
-	if err != nil {
+	var post_num int
+	if err := row.Scan(&post_num); err != nil {
 		return 0, err
 	}
 
-	post_nums := []int{}
-	for rows.Next() {
-		var i int
-		if err := rows.Scan(&i); err != nil {
-			return 0, err
-		}
-		post_nums = append(post_nums, i)
-	}
-
-	return post_nums[0], nil
+	return post_num, nil
 }
 
 func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
@@ -360,9 +359,13 @@ func (s *EggchanService) DeleteUser(user string) error {
 }
 
 func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
-	userList := []eggchan.User{}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
 
-	rows, err := s.DB.Query(`SELECT username FROM users ORDER BY id ASC`)
+	userList := []eggchan.User{}
+	rows, err := tx.Query(`SELECT username FROM users ORDER BY id ASC`)
 	if err != nil {
 		return userList, err
 	}
@@ -374,9 +377,10 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 		}
 		userList = append(userList, eggchan.User{u, []string{}})
 	}
+	rows.Close()
 
 	for i, user := range userList {
-		rows, err = s.DB.Query(
+		rows, err = tx.Query(
 			`SELECT name FROM permissions p
 			INNER JOIN user_permissions up ON p.id = up.permission
 			INNER JOIN users u ON u.id = up.user_id
@@ -396,6 +400,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 			}
 			permissions = append(permissions, p)
 		}
+		rows.Close()
 
 		userList[i].Perms = permissions
 	}
