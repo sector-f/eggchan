@@ -363,6 +363,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Commit()
 
 	userList := []eggchan.User{}
 	rows, err := tx.Query(`SELECT username FROM users ORDER BY id ASC`)
