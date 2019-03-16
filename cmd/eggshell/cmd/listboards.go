@@ -20,11 +20,7 @@ func listBoardsCommand() *cobra.Command {
 			}
 
 			for _, board := range boards {
-				if board.Description.Valid {
-					fmt.Printf("%s - %s\n", board.Name, board.Description.String)
-				} else {
-					fmt.Printf("%s\n", board.Name)
-				}
+				fmt.Printf("%s - %s\n", board.Name, board.Description)
 			}
 
 			return nil
