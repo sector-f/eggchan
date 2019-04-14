@@ -231,7 +231,7 @@ func (s *EggchanService) ValidatePassword(user string, password []byte) (bool, e
 	case nil:
 		break
 	case sql.ErrNoRows:
-		return false, eggchan.NotFoundError{}
+		return false, eggchan.UserNotFoundError{}
 	default:
 		return false, eggchan.DatabaseError{}
 	}
@@ -259,7 +259,7 @@ func (s *EggchanService) CheckPermission(user, permission string) (bool, error) 
 	case nil:
 		break
 	case sql.ErrNoRows:
-		return false, eggchan.NotFoundError{}
+		return false, eggchan.UserNotFoundError{}
 	default:
 		return false, eggchan.DatabaseError{}
 	}

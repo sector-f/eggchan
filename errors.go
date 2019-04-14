@@ -6,10 +6,28 @@ func (e UnauthorizedError) Error() string {
 	return "Unauthorized"
 }
 
-type NotFoundError struct{}
+type CategoryNotFoundError struct{}
 
-func (e NotFoundError) Error() string {
-	return "Not found"
+func (e CategoryNotFoundError) Error() string {
+	return "Category not found"
+}
+
+type BoardNotFoundError struct{}
+
+func (e BoardNotFoundError) Error() string {
+	return "Board not found"
+}
+
+type ThreadNotFoundError struct{}
+
+func (e ThreadNotFoundError) Error() string {
+	return "Thread not found"
+}
+
+type UserNotFoundError struct{}
+
+func (e UserNotFoundError) Error() string {
+	return "User not found"
 }
 
 type DatabaseError struct{}

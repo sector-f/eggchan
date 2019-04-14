@@ -82,6 +82,17 @@ func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
 }
 
 func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
+	var catExists int
+	row := s.DB.QueryRow("SELECT count(1) FROM categories WHERE name = $1", name)
+	err := row.Scan(&catExists)
+	if err != nil {
+		return nil, eggchan.DatabaseError{}
+	}
+
+	if catExists == 0 {
+		return nil, eggchan.CategoryNotFoundError{}
+	}
+
 	rows, err := s.DB.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1 ORDER BY boards.name ASC", name)
 	if err != nil {
 		return nil, eggchan.DatabaseError{}
@@ -102,6 +113,17 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 }
 
 func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
+	var boardExists int
+	row := s.DB.QueryRow("SELECT count(1) FROM boards WHERE name = $1", name)
+	err := row.Scan(&boardExists)
+	if err != nil {
+		return nil, eggchan.DatabaseError{}
+	}
+
+	if boardExists == 0 {
+		return nil, eggchan.BoardNotFoundError{}
+	}
+
 	rows, err := s.DB.Query(
 		`SELECT
 			$1::text,
@@ -124,13 +146,12 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 		name,
 	)
 
-	threads := []eggchan.Thread{}
-
 	if err != nil {
-		return threads, eggchan.DatabaseError{}
+		return nil, eggchan.DatabaseError{}
 	}
 	defer rows.Close()
 
+	threads := []eggchan.Thread{}
 	for rows.Next() {
 		var t eggchan.Thread
 		if err := rows.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
@@ -143,6 +164,35 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 }
 
 func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Post, error) {
+	var boardExists int
+	row := s.DB.QueryRow("SELECT count(1) FROM boards WHERE name = $1", board)
+	err := row.Scan(&boardExists)
+	if err != nil {
+		return nil, eggchan.DatabaseError{}
+	}
+
+	if boardExists == 0 {
+		return nil, eggchan.BoardNotFoundError{}
+	}
+
+	var threadExists int
+	row = s.DB.QueryRow(
+		`SELECT count(1) FROM threads
+		INNER JOIN boards ON boards.id = threads.board_id
+		WHERE boards.name = $1
+		AND threads.post_num = $2`,
+		board,
+		thread_num,
+	)
+	err = row.Scan(&threadExists)
+	if err != nil {
+		return nil, eggchan.DatabaseError{}
+	}
+
+	if threadExists == 0 {
+		return nil, eggchan.ThreadNotFoundError{}
+	}
+
 	c_rows, err := s.DB.Query(
 		`SELECT comments.reply_to, comments.post_num, comments.author, comments.time, comments.comment
 		FROM comments
@@ -173,6 +223,17 @@ func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Pos
 }
 
 func (s *EggchanService) MakeThread(board string, comment string, author string, subject string) (int, error) {
+	var boardExists int
+	row := s.DB.QueryRow("SELECT count(1) FROM boards WHERE name = $1", board)
+	err := row.Scan(&boardExists)
+	if err != nil {
+		return 0, eggchan.DatabaseError{}
+	}
+
+	if boardExists == 0 {
+		return 0, eggchan.BoardNotFoundError{}
+	}
+
 	rows, err := s.DB.Query(
 		`INSERT INTO threads (board_id, comment, author, subject)
 		VALUES(
@@ -205,7 +266,36 @@ func (s *EggchanService) MakeThread(board string, comment string, author string,
 }
 
 func (s *EggchanService) MakeComment(board string, thread int, comment string, author string) (int, error) {
-	row := s.DB.QueryRow(
+	var boardExists int
+	row := s.DB.QueryRow("SELECT count(1) FROM boards WHERE name = $1", board)
+	err := row.Scan(&boardExists)
+	if err != nil {
+		return 0, eggchan.DatabaseError{}
+	}
+
+	if boardExists == 0 {
+		return 0, eggchan.BoardNotFoundError{}
+	}
+
+	var threadExists int
+	row = s.DB.QueryRow(
+		`SELECT count(1) FROM threads
+		INNER JOIN boards ON boards.id = threads.board_id
+		WHERE boards.name = $1
+		AND threads.post_num = $2`,
+		board,
+		thread,
+	)
+	err = row.Scan(&threadExists)
+	if err != nil {
+		return 0, eggchan.DatabaseError{}
+	}
+
+	if threadExists == 0 {
+		return 0, eggchan.ThreadNotFoundError{}
+	}
+
+	row = s.DB.QueryRow(
 		`INSERT INTO comments (reply_to, comment, author)
 		VALUES(
 			(SELECT threads.id FROM threads INNER JOIN boards ON threads.board_id = boards.id WHERE boards.name = $1 AND threads.post_num = $2),
@@ -221,12 +311,13 @@ func (s *EggchanService) MakeComment(board string, thread int, comment string, a
 
 	var post_num int
 
-	err := row.Scan(&post_num)
+	err = row.Scan(&post_num)
 	switch err {
 	case nil:
 		break
 	case sql.ErrNoRows:
-		return 0, eggchan.NotFoundError{}
+		// TODO: make sure a nonexistent thread actually results in ErrNoRows
+		return 0, eggchan.ThreadNotFoundError{}
 	default:
 		return 0, eggchan.DatabaseError{}
 	}
@@ -234,38 +325,20 @@ func (s *EggchanService) MakeComment(board string, thread int, comment string, a
 	return post_num, nil
 }
 
-func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
-	rows, err := s.DB.Query(
-		`SELECT post_num
-		FROM threads
-		INNER JOIN boards ON threads.board_id = boards.id
-		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
-		AND threads.post_num = $2`,
-		board,
-		thread,
-	)
-
-	if err != nil {
-		return false, eggchan.DatabaseError{}
-	}
-
-	posts := []eggchan.Post{}
-	for rows.Next() {
-		var p eggchan.Post
-		if err := rows.Scan(&p.PostNum); err != nil {
-			return false, eggchan.DatabaseError{}
-		}
-		posts = append(posts, p)
-	}
-
-	if len(posts) == 0 {
-		return false, nil
-	} else {
-		return true, nil
-	}
-}
-
 func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
+	var b eggchan.Board
+
+	var boardExists int
+	row := s.DB.QueryRow("SELECT count(1) FROM boards WHERE name = $1", board)
+	err := row.Scan(&boardExists)
+	if err != nil {
+		return b, eggchan.DatabaseError{}
+	}
+
+	if boardExists == 0 {
+		return b, eggchan.BoardNotFoundError{}
+	}
+
 	b_row := s.DB.QueryRow(
 		`SELECT boards.name, boards.description, boards.category
 		FROM boards
@@ -273,14 +346,12 @@ func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
 		board,
 	)
 
-	var b eggchan.Board
-
-	err := b_row.Scan(&b.Name, &b.Description, &b.Category)
+	err = b_row.Scan(&b.Name, &b.Description, &b.Category)
 	switch err {
 	case nil:
 		break
 	case sql.ErrNoRows:
-		return b, eggchan.NotFoundError{}
+		return b, eggchan.BoardNotFoundError{}
 	default:
 		return b, eggchan.DatabaseError{}
 	}
@@ -289,6 +360,37 @@ func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
 }
 
 func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, error) {
+	var t eggchan.Thread
+
+	var boardExists int
+	row := s.DB.QueryRow("SELECT count(1) FROM boards WHERE name = $1", board)
+	err := row.Scan(&boardExists)
+	if err != nil {
+		return t, eggchan.DatabaseError{}
+	}
+
+	if boardExists == 0 {
+		return t, eggchan.BoardNotFoundError{}
+	}
+
+	var threadExists int
+	row = s.DB.QueryRow(
+		`SELECT count(1) FROM threads
+		INNER JOIN boards ON boards.id = threads.board_id
+		WHERE boards.name = $1
+		AND threads.post_num = $2`,
+		board,
+		id,
+	)
+	err = row.Scan(&threadExists)
+	if err != nil {
+		return t, eggchan.DatabaseError{}
+	}
+
+	if threadExists == 0 {
+		return t, eggchan.ThreadNotFoundError{}
+	}
+
 	t_row := s.DB.QueryRow(
 		`SELECT
 			$1::text,
@@ -313,14 +415,12 @@ func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, err
 		id,
 	)
 
-	var t eggchan.Thread
-
-	err := t_row.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment)
+	err = t_row.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment)
 	switch err {
 	case nil:
 		break
 	case sql.ErrNoRows:
-		return t, eggchan.NotFoundError{}
+		return t, eggchan.ThreadNotFoundError{}
 	default:
 		return t, eggchan.DatabaseError{}
 	}
