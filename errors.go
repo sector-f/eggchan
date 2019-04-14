@@ -36,6 +36,12 @@ func (e DatabaseError) Error() string {
 	return "Database error"
 }
 
+type PermissionDeniedError struct{}
+
+func (e PermissionDeniedError) Error() string {
+	return "Permission denied"
+}
+
 type UnimplementedError struct{}
 
 func (e UnimplementedError) Error() string {
