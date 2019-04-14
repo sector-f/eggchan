@@ -14,6 +14,7 @@ func handleNotFound(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotFound, "Not found")
 }
 
+// GET /categories
 func (e *HttpServer) getCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := e.BoardService.ListCategories()
 	if err != nil {
@@ -24,6 +25,7 @@ func (e *HttpServer) getCategories(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, categories)
 }
 
+// GET /categories/{category}
 func (e *HttpServer) showCategory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["category"]
@@ -37,6 +39,7 @@ func (e *HttpServer) showCategory(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, boards)
 }
 
+// GET /boards/{board}
 func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["board"]
@@ -54,6 +57,7 @@ func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GET /boards/{board}/{thread}
 func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	boardName := vars["board"]
@@ -78,6 +82,7 @@ func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GET /boards
 func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
 	boards, err := e.BoardService.ListBoards()
 	if err != nil {
@@ -88,6 +93,7 @@ func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, boards)
 }
 
+// POST /boards/{board}
 func (e *HttpServer) postThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
@@ -122,6 +128,7 @@ func (e *HttpServer) postThread(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, eggchan.PostThreadResponse{post_num})
 }
 
+// POST /boards/{board}/{thread}
 func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
@@ -163,6 +170,7 @@ func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, eggchan.PostCommentResponse{thread, post_num})
 }
 
+// DELETE /boards/{board}/threads/{thread}
 func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
@@ -189,6 +197,7 @@ func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DELETE /boards/{board}/comments/{comment}
 func (e *HttpServer) deleteComment(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
