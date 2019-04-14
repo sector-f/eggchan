@@ -6,12 +6,41 @@ import (
 	"github.com/sector-f/eggchan"
 )
 
-func (s *EggchanService) ShowBoardReply(board string) (eggchan.BoardReply, error) {
-	return eggchan.BoardReply{}, eggchan.UnimplementedError{}
+func (s *EggchanService) ShowBoardReply(name string) (eggchan.BoardReply, error) {
+	// TODO: Use transaction for SELECTs here?
+
+	board, err := s.ShowBoardDesc(name)
+	if err != nil {
+		return eggchan.BoardReply{}, err
+	}
+
+	posts, err := s.ShowBoard(name)
+	if err != nil {
+		return eggchan.BoardReply{}, err
+	}
+
+	return eggchan.BoardReply{board, posts}, nil
 }
 
-func (s *EggchanService) ShowThreadReply(board string, id int) (eggchan.ThreadReply, error) {
-	return eggchan.ThreadReply{}, eggchan.UnimplementedError{}
+func (s *EggchanService) ShowThreadReply(name string, id int) (eggchan.ThreadReply, error) {
+	// TODO: Use transaction for SELECTs here?
+
+	board, err := s.ShowBoardDesc(name)
+	if err != nil {
+		return eggchan.ThreadReply{}, err
+	}
+
+	op, err := s.ShowThreadOP(name, id)
+	if err != nil {
+		return eggchan.ThreadReply{}, err
+	}
+
+	posts, err := s.ShowThread(name, id)
+	if err != nil {
+		return eggchan.ThreadReply{}, err
+	}
+
+	return eggchan.ThreadReply{board, op, posts}, nil
 }
 
 func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {

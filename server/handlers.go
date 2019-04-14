@@ -41,50 +41,41 @@ func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["board"]
 
-	board, err := e.BoardService.ShowBoardDesc(name)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid board")
-		return
+	boardReply, err := e.BoardService.ShowBoardReply(name)
+	switch err.(type) {
+	case nil:
+		respondWithJSON(w, http.StatusOK, boardReply)
+	case eggchan.BoardNotFoundError:
+		respondWithError(w, http.StatusNotFound, err.Error())
+	case eggchan.DatabaseError:
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+	default:
+		respondWithError(w, http.StatusInternalServerError, "Unknown error")
 	}
-
-	posts, err := e.BoardService.ShowBoard(name)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid board")
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, eggchan.BoardReply{board, posts})
 }
 
 func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	boardName := vars["board"]
-
-	board, err := e.BoardService.ShowBoardDesc(boardName)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid board")
-		return
-	}
-
 	thread, err := strconv.Atoi(vars["thread"])
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid thread ID")
 		return
 	}
 
-	op, err := e.BoardService.ShowThreadOP(boardName, thread)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
-		return
+	threadReply, err := e.BoardService.ShowThreadReply(boardName, thread)
+	switch err.(type) {
+	case nil:
+		respondWithJSON(w, http.StatusOK, threadReply)
+	case eggchan.BoardNotFoundError:
+		respondWithError(w, http.StatusNotFound, err.Error())
+	case eggchan.ThreadNotFoundError:
+		respondWithError(w, http.StatusNotFound, err.Error())
+	case eggchan.DatabaseError:
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+	default:
+		respondWithError(w, http.StatusInternalServerError, "Unknown error")
 	}
-
-	posts, err := e.BoardService.ShowThread(boardName, thread)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, eggchan.ThreadReply{board, op, posts})
 }
 
 func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
