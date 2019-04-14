@@ -49,8 +49,7 @@ func main() {
 		service := postgres.EggchanService{db}
 		httpServer := server.HttpServer{
 			BoardService: &service,
-			AdminService: &service,
-			AuthService: &service,
+			AuthService:  &service,
 		}
 		httpServer.Initialize()
 		httpServer.Run(ctx.String("bind"))
