@@ -15,21 +15,21 @@ type EggchanService struct {
 func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 	tx, err := s.DB.Begin()
 	if err != nil {
-		return nil, err
+		return nil, eggchan.DatabaseError{}
 	}
 	defer tx.Commit()
 
 	catRows, err := tx.Query("SELECT name FROM categories ORDER BY name ASC")
 
 	if err != nil {
-		return nil, err
+		return nil, eggchan.DatabaseError{}
 	}
 
 	categories := []eggchan.Category{}
 	for catRows.Next() {
 		var c eggchan.Category
 		if err := catRows.Scan(&c.Name); err != nil {
-			return nil, err
+			return nil, eggchan.DatabaseError{}
 		}
 
 		categories = append(categories, c)
@@ -39,14 +39,14 @@ func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 	for i, category := range categories {
 		boardRows, err := tx.Query("SELECT b.name, b.description, $1::text FROM boards b INNER JOIN categories c ON c.id = b.category WHERE c.name = $1::text", category.Name)
 		if err != nil {
-			return nil, err
+			return nil, eggchan.DatabaseError{}
 		}
 
 		boards := []eggchan.Board{}
 		for boardRows.Next() {
 			var b eggchan.Board
 			if err := boardRows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
-				return nil, err
+				return nil, eggchan.DatabaseError{}
 			}
 			boards = append(boards, b)
 		}
@@ -62,7 +62,7 @@ func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
 	rows, err := s.DB.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id ORDER BY boards.name ASC")
 
 	if err != nil {
-		return nil, err
+		return nil, eggchan.DatabaseError{}
 	}
 
 	defer rows.Close()
@@ -71,7 +71,7 @@ func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
 	for rows.Next() {
 		var b eggchan.Board
 		if err := rows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
-			return nil, err
+			return nil, eggchan.DatabaseError{}
 		}
 		boards = append(boards, b)
 	}
@@ -82,7 +82,7 @@ func (s *EggchanService) ListBoards() ([]eggchan.Board, error) {
 func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 	rows, err := s.DB.Query("SELECT boards.name, boards.description, categories.name FROM boards LEFT JOIN categories ON boards.category = categories.id WHERE categories.name = $1 ORDER BY boards.name ASC", name)
 	if err != nil {
-		return nil, err
+		return nil, eggchan.DatabaseError{}
 	}
 
 	defer rows.Close()
@@ -91,7 +91,7 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 	for rows.Next() {
 		var b eggchan.Board
 		if err := rows.Scan(&b.Name, &b.Description, &b.Category); err != nil {
-			return nil, err
+			return nil, eggchan.DatabaseError{}
 		}
 		boards = append(boards, b)
 	}
@@ -125,14 +125,14 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 	threads := []eggchan.Thread{}
 
 	if err != nil {
-		return threads, err
+		return threads, eggchan.DatabaseError{}
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var t eggchan.Thread
 		if err := rows.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
-			return threads, err
+			return threads, eggchan.DatabaseError{}
 		}
 		threads = append(threads, t)
 	}
@@ -155,14 +155,14 @@ func (s *EggchanService) ShowThread(board string, thread_num int) ([]eggchan.Pos
 	posts := []eggchan.Post{}
 
 	if err != nil {
-		return posts, err
+		return posts, eggchan.DatabaseError{}
 	}
 	defer c_rows.Close()
 
 	for c_rows.Next() {
 		var p eggchan.Post
 		if err := c_rows.Scan(&p.ReplyTo, &p.PostNum, &p.Author, &p.Time, &p.Comment); err != nil {
-			return posts, err
+			return posts, eggchan.DatabaseError{}
 		}
 		posts = append(posts, p)
 	}
@@ -187,14 +187,14 @@ func (s *EggchanService) MakeThread(board string, comment string, author string,
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, eggchan.DatabaseError{}
 	}
 
 	post_nums := []int{}
 	for rows.Next() {
 		var i int
 		if err := rows.Scan(&i); err != nil {
-			return 0, err
+			return 0, eggchan.DatabaseError{}
 		}
 		post_nums = append(post_nums, i)
 	}
@@ -218,8 +218,15 @@ func (s *EggchanService) MakeComment(board string, thread int, comment string, a
 	)
 
 	var post_num int
-	if err := row.Scan(&post_num); err != nil {
-		return 0, err
+
+	err := row.Scan(&post_num)
+	switch err {
+	case nil:
+		break
+	case sql.ErrNoRows:
+		return 0, eggchan.NotFoundError{}
+	default:
+		return 0, eggchan.DatabaseError{}
 	}
 
 	return post_num, nil
@@ -237,14 +244,14 @@ func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
 	)
 
 	if err != nil {
-		return false, err
+		return false, eggchan.DatabaseError{}
 	}
 
 	posts := []eggchan.Post{}
 	for rows.Next() {
 		var p eggchan.Post
 		if err := rows.Scan(&p.PostNum); err != nil {
-			return false, err
+			return false, eggchan.DatabaseError{}
 		}
 		posts = append(posts, p)
 	}
@@ -259,8 +266,15 @@ func (s *EggchanService) checkIsOp(board string, thread int) (bool, error) {
 func (s *EggchanService) getUserAuthentication(name string, pw []byte) (bool, error) {
 	pw_row := s.DB.QueryRow(`SELECT password FROM users WHERE username = $1`, name)
 	var db_pw []byte
-	if err := pw_row.Scan(&db_pw); err != nil {
-		return false, err
+
+	err := pw_row.Scan(&db_pw)
+	switch err {
+	case nil:
+		break
+	case sql.ErrNoRows:
+		return false, eggchan.NotFoundError{}
+	default:
+		return false, eggchan.DatabaseError{}
 	}
 
 	if err := bcrypt.CompareHashAndPassword(db_pw, pw); err != nil {
@@ -280,8 +294,15 @@ func (s *EggchanService) getUserAuthorization(name string, perm string) (bool, e
 	)
 
 	var count int
-	if err := row.Scan(&count); err != nil {
-		return false, err
+
+	err := row.Scan(&count)
+	switch err {
+	case nil:
+		break
+	case sql.ErrNoRows:
+		return false, eggchan.NotFoundError{}
+	default:
+		return false, eggchan.DatabaseError{}
 	}
 
 	if count > 0 {
@@ -301,7 +322,7 @@ func (s *EggchanService) DeleteThread(board string, thread int) (int64, error) {
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, eggchan.DatabaseError{}
 	}
 
 	count, _ := result.RowsAffected()
@@ -319,7 +340,7 @@ func (s *EggchanService) DeleteComment(board string, comment int) (int64, error)
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, eggchan.DatabaseError{}
 	}
 
 	count, _ := result.RowsAffected()
@@ -334,7 +355,7 @@ func (s *EggchanService) AddUser(user, password string) error {
 	)
 
 	if err != nil {
-		return err
+		return eggchan.DatabaseError{}
 	}
 
 	return nil
@@ -347,7 +368,7 @@ func (s *EggchanService) DeleteUser(user string) error {
 	)
 
 	if err != nil {
-		return err
+		return eggchan.DatabaseError{}
 	}
 
 	affected, _ := result.RowsAffected()
@@ -361,20 +382,20 @@ func (s *EggchanService) DeleteUser(user string) error {
 func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 	tx, err := s.DB.Begin()
 	if err != nil {
-		return nil, err
+		return nil, eggchan.DatabaseError{}
 	}
 	defer tx.Commit()
 
 	userList := []eggchan.User{}
 	rows, err := tx.Query(`SELECT username FROM users ORDER BY id ASC`)
 	if err != nil {
-		return userList, err
+		return userList, eggchan.DatabaseError{}
 	}
 
 	for i := 0; rows.Next(); i++ {
 		var u string
 		if err := rows.Scan(&u); err != nil {
-			return userList, err
+			return userList, eggchan.DatabaseError{}
 		}
 		userList = append(userList, eggchan.User{u, []string{}})
 	}
@@ -390,14 +411,14 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 			user.Name,
 		)
 		if err != nil {
-			return userList, err
+			return userList, eggchan.DatabaseError{}
 		}
 
 		permissions := []string{}
 		for rows.Next() {
 			var p string
 			if err := rows.Scan(&p); err != nil {
-				return userList, err
+				return userList, eggchan.DatabaseError{}
 			}
 			permissions = append(permissions, p)
 		}
@@ -419,7 +440,7 @@ func (s *EggchanService) GrantPermissions(user string, perms []eggchan.Permissio
 		)
 
 		if err != nil {
-			return err
+			return eggchan.DatabaseError{}
 		}
 	}
 
@@ -438,7 +459,7 @@ func (s *EggchanService) RevokePermissions(user string, perms []eggchan.Permissi
 
 		// TODO: figure out a better way to do this
 		if err != nil {
-			return err
+			return eggchan.DatabaseError{}
 		}
 	}
 
@@ -449,13 +470,13 @@ func (s *EggchanService) ListPermissions() ([]eggchan.Permission, error) {
 	perms := []eggchan.Permission{}
 	rows, err := s.DB.Query(`SELECT name FROM permissions ORDER BY id ASC`)
 	if err != nil {
-		return perms, err
+		return perms, eggchan.DatabaseError{}
 	}
 
 	for i := 0; rows.Next(); i++ {
 		var n string
 		if err := rows.Scan(&n); err != nil {
-			return perms, err
+			return perms, eggchan.DatabaseError{}
 		}
 		perms = append(perms, eggchan.Permission{n})
 	}
@@ -470,7 +491,7 @@ func (s *EggchanService) AddCategory(category string) error {
 	)
 
 	if err != nil {
-		return err
+		return eggchan.DatabaseError{}
 	}
 
 	return nil
@@ -499,7 +520,7 @@ func (s *EggchanService) AddBoard(board, description, category string) error {
 	)
 
 	if err != nil {
-		return err
+		return eggchan.DatabaseError{}
 	}
 
 	return nil
@@ -508,8 +529,15 @@ func (s *EggchanService) AddBoard(board, description, category string) error {
 func (s *EggchanService) ValidatePassword(user string, password []byte) (bool, error) {
 	pw_row := s.DB.QueryRow(`SELECT password FROM users WHERE username = $1`, user)
 	var db_pw []byte
-	if err := pw_row.Scan(&db_pw); err != nil {
-		return false, err
+
+	err := pw_row.Scan(&db_pw)
+	switch err {
+	case nil:
+		break
+	case sql.ErrNoRows:
+		return false, eggchan.NotFoundError{}
+	default:
+		return false, eggchan.DatabaseError{}
 	}
 
 	if err := bcrypt.CompareHashAndPassword(db_pw, password); err != nil {
@@ -529,8 +557,15 @@ func (s *EggchanService) CheckPermission(user, permission string) (bool, error) 
 	)
 
 	var count int
-	if err := row.Scan(&count); err != nil {
-		return false, err
+
+	err := row.Scan(&count)
+	switch err {
+	case nil:
+		break
+	case sql.ErrNoRows:
+		return false, eggchan.NotFoundError{}
+	default:
+		return false, eggchan.DatabaseError{}
 	}
 
 	if count > 0 {
@@ -549,8 +584,15 @@ func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
 	)
 
 	var b eggchan.Board
-	if err := b_row.Scan(&b.Name, &b.Description, &b.Category); err != nil {
-		return b, err
+
+	err := b_row.Scan(&b.Name, &b.Description, &b.Category)
+	switch err {
+	case nil:
+		break
+	case sql.ErrNoRows:
+		return b, eggchan.NotFoundError{}
+	default:
+		return b, eggchan.DatabaseError{}
 	}
 
 	return b, nil
@@ -582,8 +624,15 @@ func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, err
 	)
 
 	var t eggchan.Thread
-	if err := t_row.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment); err != nil {
-		return t, err
+
+	err := t_row.Scan(&t.Board, &t.PostNum, &t.Subject, &t.Author, &t.Time, &t.NumReplies, &t.SortLatestReply, &t.Comment)
+	switch err {
+	case nil:
+		break
+	case sql.ErrNoRows:
+		return t, eggchan.NotFoundError{}
+	default:
+		return t, eggchan.DatabaseError{}
 	}
 
 	return t, nil
