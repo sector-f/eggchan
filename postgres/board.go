@@ -6,6 +6,14 @@ import (
 	"github.com/sector-f/eggchan"
 )
 
+func (s *EggchanService) ShowBoardReply(board string) (eggchan.BoardReply, error) {
+	return eggchan.BoardReply{}, eggchan.UnimplementedError{}
+}
+
+func (s *EggchanService) ShowThreadReply(board string, id int) (eggchan.ThreadReply, error) {
+	return eggchan.ThreadReply{}, eggchan.UnimplementedError{}
+}
+
 func (s *EggchanService) ListCategories() ([]eggchan.Category, error) {
 	tx, err := s.DB.Begin()
 	if err != nil {

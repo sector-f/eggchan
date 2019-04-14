@@ -17,3 +17,9 @@ type DatabaseError struct{}
 func (e DatabaseError) Error() string {
 	return "Database error"
 }
+
+type UnimplementedError struct{}
+
+func (e UnimplementedError) Error() string {
+	return "Unimplemented"
+}
