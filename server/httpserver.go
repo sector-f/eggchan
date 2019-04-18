@@ -55,6 +55,10 @@ func (s *HttpServer) Initialize() {
 
 		handler = handlers.LoggingHandler(os.Stdout, handlers.ProxyHeaders(handler))
 		router.Methods(route.Method).Path(route.Pattern).Handler(handler)
+
+		if route.Method == "GET" {
+			router.Methods("HEAD").Path(route.Pattern).Handler(handler)
+		}
 	}
 
 	s.Router = router
