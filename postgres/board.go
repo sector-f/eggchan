@@ -456,3 +456,45 @@ func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, err
 
 	return t, nil
 }
+
+func (s *EggchanService) AddCategory(category string) error {
+	_, err := s.DB.Exec(
+		`INSERT INTO categories (name) VALUES ($1)`,
+		category,
+	)
+
+	if err != nil {
+		return eggchan.DatabaseError{}
+	}
+
+	return nil
+}
+
+func (s *EggchanService) AddBoard(board, description, category string) error {
+	var d sql.NullString
+	if description == "" {
+		d = sql.NullString{"", false}
+	} else {
+		d = sql.NullString{description, true}
+	}
+
+	var c sql.NullString
+	if category == "" {
+		c = sql.NullString{"", false}
+	} else {
+		c = sql.NullString{category, true}
+	}
+
+	_, err := s.DB.Exec(
+		`INSERT INTO boards (name, description, category) VALUES ($1, $2, (SELECT id FROM categories WHERE name = $3))`,
+		board,
+		d,
+		c,
+	)
+
+	if err != nil {
+		return eggchan.DatabaseError{}
+	}
+
+	return nil
+}
