@@ -14,6 +14,7 @@ func handleNotFound(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotFound, "Not found")
 }
 
+// GET /categories
 func (e *HttpServer) getCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := e.BoardService.ListCategories()
 	if err != nil {
@@ -24,6 +25,7 @@ func (e *HttpServer) getCategories(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, categories)
 }
 
+// GET /categories/{category}
 func (e *HttpServer) showCategory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["category"]
@@ -37,56 +39,50 @@ func (e *HttpServer) showCategory(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, boards)
 }
 
+// GET /boards/{board}
 func (e *HttpServer) showBoard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["board"]
 
-	board, err := e.BoardService.ShowBoardDesc(name)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid board")
-		return
+	boardReply, err := e.BoardService.ShowBoardReply(name)
+	switch err.(type) {
+	case nil:
+		respondWithJSON(w, http.StatusOK, boardReply)
+	case eggchan.BoardNotFoundError:
+		respondWithError(w, http.StatusNotFound, err.Error())
+	case eggchan.DatabaseError:
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+	default:
+		respondWithError(w, http.StatusInternalServerError, "Unknown error")
 	}
-
-	posts, err := e.BoardService.ShowBoard(name)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid board")
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, eggchan.BoardReply{board, posts})
 }
 
+// GET /boards/{board}/{thread}
 func (e *HttpServer) showThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	boardName := vars["board"]
-
-	board, err := e.BoardService.ShowBoardDesc(boardName)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid board")
-		return
-	}
-
 	thread, err := strconv.Atoi(vars["thread"])
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid thread ID")
 		return
 	}
 
-	op, err := e.BoardService.ShowThreadOP(boardName, thread)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
-		return
+	threadReply, err := e.BoardService.ShowThreadReply(boardName, thread)
+	switch err.(type) {
+	case nil:
+		respondWithJSON(w, http.StatusOK, threadReply)
+	case eggchan.BoardNotFoundError:
+		respondWithError(w, http.StatusNotFound, err.Error())
+	case eggchan.ThreadNotFoundError:
+		respondWithError(w, http.StatusNotFound, err.Error())
+	case eggchan.DatabaseError:
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+	default:
+		respondWithError(w, http.StatusInternalServerError, "Unknown error")
 	}
-
-	posts, err := e.BoardService.ShowThread(boardName, thread)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid thread or board")
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, eggchan.ThreadReply{board, op, posts})
 }
 
+// GET /boards
 func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
 	boards, err := e.BoardService.ListBoards()
 	if err != nil {
@@ -97,6 +93,7 @@ func (e *HttpServer) getBoards(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, boards)
 }
 
+// POST /boards/{board}
 func (e *HttpServer) postThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
@@ -131,6 +128,7 @@ func (e *HttpServer) postThread(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, eggchan.PostThreadResponse{post_num})
 }
 
+// POST /boards/{board}/{thread}
 func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
@@ -172,6 +170,7 @@ func (e *HttpServer) postReply(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, eggchan.PostCommentResponse{thread, post_num})
 }
 
+// DELETE /boards/{board}/threads/{thread}
 func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
@@ -182,7 +181,7 @@ func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted_count, err := e.AdminService.DeleteThread(board, thread)
+	deleted_count, err := e.BoardService.DeleteThread(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not delete thread")
 		return
@@ -198,6 +197,7 @@ func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DELETE /boards/{board}/comments/{comment}
 func (e *HttpServer) deleteComment(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	board := vars["board"]
@@ -208,7 +208,7 @@ func (e *HttpServer) deleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted_count, err := e.AdminService.DeleteComment(board, thread)
+	deleted_count, err := e.BoardService.DeleteComment(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not delete comment")
 		return
