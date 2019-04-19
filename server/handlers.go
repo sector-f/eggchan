@@ -223,3 +223,36 @@ func (e *HttpServer) deleteComment(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, http.StatusInternalServerError, SuccessMessage{"Multiple comments were deleted--this is probably an error"})
 	}
 }
+
+// POST /new/boards/{board}
+func (s *HttpServer) createBoard(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	board := vars["board"]
+
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
+	err := r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		respondWithError(w, http.StatusRequestEntityTooLarge, "Length limit exceeded")
+		return
+	}
+
+	description := strings.TrimSpace(r.FormValue("description"))
+	if description == "" {
+		respondWithError(w, http.StatusBadRequest, "Description cannot be empty")
+		return
+	}
+
+	category := strings.TrimSpace(r.FormValue("category"))
+	if category == "" {
+		respondWithError(w, http.StatusBadRequest, "Category cannot be empty")
+		return
+	}
+
+	err = s.BoardService.AddBoard(board, description, category)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, SuccessMessage{"Board created"})
+}

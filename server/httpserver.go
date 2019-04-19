@@ -40,6 +40,8 @@ func (s *HttpServer) Initialize() {
 
 		Route{"DELETE", "/boards/{board}/threads/{thread}", s.deleteThread, true, "delete_thread"},
 		Route{"DELETE", "/boards/{board}/comments/{comment}", s.deleteComment, true, "delete_post"},
+
+		Route{"POST", "/new/boards/{board}", s.createBoard, true, "create_board"},
 	}
 
 	router := mux.NewRouter().StrictSlash(true)
