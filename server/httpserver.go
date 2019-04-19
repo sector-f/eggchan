@@ -14,11 +14,13 @@ type HttpServer struct {
 	Router       *mux.Router
 	BoardService eggchan.BoardService
 	AuthService  eggchan.AuthService
+	routes       Routes
 }
 
 type Route struct {
 	Method       string
 	Pattern      string
+	Description  string
 	HandlerFunc  http.HandlerFunc
 	AuthRequired bool
 	Permission   string
@@ -28,21 +30,25 @@ type Routes []Route
 
 func (s *HttpServer) Initialize() {
 	var routes = Routes{
-		Route{"GET", "/categories", s.getCategories, false, ""},
-		Route{"GET", "/categories/{category}", s.showCategory, false, ""},
+		Route{"GET", "/", "List routes", s.index, false, ""},
 
-		Route{"GET", "/boards", s.getBoards, false, ""},
-		Route{"GET", "/boards/{board}", s.showBoard, false, ""},
-		Route{"POST", "/boards/{board}", s.postThread, false, ""},
+		Route{"GET", "/categories", "List categories", s.getCategories, false, ""},
+		Route{"GET", "/categories/{category}", "List boards in a specific category", s.showCategory, false, ""},
 
-		Route{"GET", "/boards/{board}/{thread}", s.showThread, false, ""},
-		Route{"POST", "/boards/{board}/{thread}", s.postReply, false, ""},
+		Route{"GET", "/boards", "List boards", s.getBoards, false, ""},
+		Route{"GET", "/boards/{board}", "List threads in a specific board", s.showBoard, false, ""},
+		Route{"POST", "/boards/{board}", "Post to a specific board", s.postThread, false, ""},
 
-		Route{"DELETE", "/boards/{board}/threads/{thread}", s.deleteThread, true, "delete_thread"},
-		Route{"DELETE", "/boards/{board}/comments/{comment}", s.deleteComment, true, "delete_post"},
+		Route{"GET", "/boards/{board}/{thread}", "Show a specific thread", s.showThread, false, ""},
+		Route{"POST", "/boards/{board}/{thread}", "Post to a specific thread", s.postReply, false, ""},
 
-		Route{"POST", "/new/boards/{board}", s.createBoard, true, "create_board"},
+		Route{"DELETE", "/boards/{board}/threads/{thread}", "Delete a specific thread", s.deleteThread, true, "delete_thread"},
+		Route{"DELETE", "/boards/{board}/comments/{comment}", "Delete a specific comment", s.deleteComment, true, "delete_post"},
+
+		Route{"POST", "/new/boards/{board}", "Create a new board", s.createBoard, true, "create_board"},
 	}
+
+	s.routes = routes
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.NotFoundHandler = http.HandlerFunc(handleNotFound)

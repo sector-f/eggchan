@@ -1,9 +1,12 @@
 package server
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
@@ -12,6 +15,20 @@ import (
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotFound, "Not found")
+}
+
+// GET /
+func (s *HttpServer) index(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+	tabWriter := tabwriter.NewWriter(&buf, 0, 0, 1, ' ', 0)
+
+	for _, route := range s.routes {
+		message := fmt.Sprintf("%v\t%v\t%v\n", route.Method, route.Pattern, route.Description)
+		tabWriter.Write([]byte(message))
+	}
+	tabWriter.Flush()
+
+	w.Write(buf.Bytes())
 }
 
 // GET /categories
