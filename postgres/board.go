@@ -471,22 +471,23 @@ func (s *EggchanService) AddCategory(category string) error {
 }
 
 func (s *EggchanService) AddBoard(board, description, category string) error {
-	var err error
-
-	if category == "" {
-		_, err = s.DB.Exec(
-			`INSERT INTO boards (name, description) VALUES ($1, $2)`,
-			board,
-			description,
-		)
-	} else {
-		_, err = s.DB.Exec(
-			`INSERT INTO boards (name, description, category) VALUES ($1, $2, (SELECT id FROM categories WHERE name = $3))`,
-			board,
-			description,
-			category,
-		)
+	var catExists int
+	row := s.DB.QueryRow("SELECT count(1) FROM categories WHERE name = $1", category)
+	err := row.Scan(&catExists)
+	if err != nil {
+		return eggchan.DatabaseError{}
 	}
+
+	if catExists == 0 {
+		return eggchan.CategoryNotFoundError{}
+	}
+
+	_, err = s.DB.Exec(
+		`INSERT INTO boards (name, description, category) VALUES ($1, $2, (SELECT id FROM categories WHERE name = $3))`,
+		board,
+		description,
+		category,
+	)
 
 	if err != nil {
 		return eggchan.DatabaseError{}
