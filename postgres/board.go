@@ -370,8 +370,9 @@ func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
 	}
 
 	b_row := s.DB.QueryRow(
-		`SELECT boards.name, boards.description, boards.category
+		`SELECT boards.name, boards.description, categories.name
 		FROM boards
+		INNER JOIN categories ON boards.category = categories.id
 		WHERE boards.name = $1`,
 		board,
 	)
