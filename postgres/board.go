@@ -169,7 +169,8 @@ func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
 			threads.comment
 		FROM threads
 		LEFT JOIN comments ON threads.id = comments.reply_to
-		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		INNER JOIN boards ON threads.board_id = boards.id
+		WHERE boards.name = $1
 		GROUP BY threads.id
 		ORDER BY sort_latest_reply DESC`,
 		name,
@@ -436,7 +437,8 @@ func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, err
 			threads.comment
 		FROM threads
 		LEFT JOIN comments ON threads.id = comments.reply_to
-		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
+		INNER JOIN boards ON threads.board_id = boards.id
+		WHERE boards.name = $1
 		AND threads.post_num = $2
 		GROUP BY threads.id
 		ORDER BY sort_latest_reply DESC`,
