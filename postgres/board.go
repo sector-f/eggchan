@@ -9,12 +9,12 @@ import (
 func (s *EggchanService) ShowBoardReply(name string) (eggchan.BoardReply, error) {
 	// TODO: Use transaction for SELECTs here?
 
-	board, err := s.ShowBoardDesc(name)
+	board, err := s.showBoardDesc(name)
 	if err != nil {
 		return eggchan.BoardReply{}, err
 	}
 
-	posts, err := s.ShowBoard(name)
+	posts, err := s.showBoard(name)
 	if err != nil {
 		return eggchan.BoardReply{}, err
 	}
@@ -25,12 +25,12 @@ func (s *EggchanService) ShowBoardReply(name string) (eggchan.BoardReply, error)
 func (s *EggchanService) ShowThreadReply(name string, id int) (eggchan.ThreadReply, error) {
 	// TODO: Use transaction for SELECTs here?
 
-	board, err := s.ShowBoardDesc(name)
+	board, err := s.showBoardDesc(name)
 	if err != nil {
 		return eggchan.ThreadReply{}, err
 	}
 
-	op, err := s.ShowThreadOP(name, id)
+	op, err := s.showThreadOP(name, id)
 	if err != nil {
 		return eggchan.ThreadReply{}, err
 	}
@@ -141,7 +141,7 @@ func (s *EggchanService) ShowCategory(name string) ([]eggchan.Board, error) {
 	return boards, nil
 }
 
-func (s *EggchanService) ShowBoard(name string) ([]eggchan.Thread, error) {
+func (s *EggchanService) showBoard(name string) ([]eggchan.Thread, error) {
 	var boardExists int
 	row := s.DB.QueryRow("SELECT count(1) FROM boards WHERE name = $1", name)
 	err := row.Scan(&boardExists)
@@ -355,7 +355,7 @@ func (s *EggchanService) MakeComment(board string, thread int, comment string, a
 	return post_num, nil
 }
 
-func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
+func (s *EggchanService) showBoardDesc(board string) (eggchan.Board, error) {
 	var b eggchan.Board
 
 	var boardExists int
@@ -390,7 +390,7 @@ func (s *EggchanService) ShowBoardDesc(board string) (eggchan.Board, error) {
 	return b, nil
 }
 
-func (s *EggchanService) ShowThreadOP(board string, id int) (eggchan.Thread, error) {
+func (s *EggchanService) showThreadOP(board string, id int) (eggchan.Thread, error) {
 	var t eggchan.Thread
 
 	var boardExists int

@@ -198,7 +198,7 @@ func (e *HttpServer) deleteThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted_count, err := e.BoardService.DeleteThread(board, thread)
+	deleted_count, err := e.AdminService.DeleteThread(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not delete thread")
 		return
@@ -225,7 +225,7 @@ func (e *HttpServer) deleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted_count, err := e.BoardService.DeleteComment(board, thread)
+	deleted_count, err := e.AdminService.DeleteComment(board, thread)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not delete comment")
 		return
@@ -265,7 +265,7 @@ func (s *HttpServer) createBoard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.BoardService.AddBoard(board, description, category)
+	err = s.AdminService.AddBoard(board, description, category)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return

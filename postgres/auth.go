@@ -180,6 +180,20 @@ func (s *EggchanService) ListPermissions() ([]eggchan.Permission, error) {
 	return perms, nil
 }
 
+func (s *EggchanService) CheckAuth(user string, password []byte, permission string) (bool, error) {
+	pwIsCorrect, err := s.ValidatePassword(user, password)
+	if !pwIsCorrect || err != nil {
+		return false, eggchan.PermissionDeniedError{}
+	}
+
+	hasPermission, err := s.CheckPermission(user, permission)
+	if !hasPermission || err != nil {
+		return false, eggchan.PermissionDeniedError{}
+	}
+
+	return true, nil
+}
+
 func (s *EggchanService) ValidatePassword(user string, password []byte) (bool, error) {
 	pw_row := s.DB.QueryRow(`SELECT password FROM users WHERE username = $1`, user)
 	var db_pw []byte
