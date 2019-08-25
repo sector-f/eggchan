@@ -23,13 +23,13 @@ type AdminService interface {
 	DeleteComment(board string, thread int) (int64, error)
 }
 
-type UserService interface {
-	ListUsers() ([]User, error)
-	AddUser(user, password string) error
-	DeleteUser(user string) error
-	GrantPermissions(user string, perms []Permission) error
-	RevokePermissions(user string, perms []Permission) error
-}
+// type UserService interface {
+// 	ListUsers() ([]User, error)
+// 	AddUser(user, password string) error
+// 	DeleteUser(user string) error
+// 	GrantPermissions(user string, perms []Permission) error
+// 	RevokePermissions(user string, perms []Permission) error
+// }
 
 type AuthService interface {
 	CheckAuth(user string, password []byte, permission string) (bool, error)
