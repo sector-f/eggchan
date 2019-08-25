@@ -73,6 +73,12 @@ func (s *HttpServer) Initialize() {
 	s.Router = router
 }
 
+func prettyHandler(h http.Handler, pretty bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r)
+	}
+}
+
 func (s *HttpServer) Run(addr string) {
 	log.Fatal(http.ListenAndServe(addr, s.Router))
 }

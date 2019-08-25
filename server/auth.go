@@ -8,13 +8,13 @@ func (s *HttpServer) auth(inner http.Handler, permission string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, ok := r.BasicAuth()
 		if !ok {
-			respondWithError(w, http.StatusUnauthorized, "Authentication required")
+			respondWithError(w, http.StatusUnauthorized, isPretty(r), "Authentication required")
 			return
 		}
 
 		hasPermission, err := s.AuthService.CheckAuth(username, []byte(password), permission)
 		if !hasPermission || err != nil {
-			respondWithError(w, http.StatusUnauthorized, "Permission denied")
+			respondWithError(w, http.StatusUnauthorized, isPretty(r), "Permission denied")
 			return
 		}
 
