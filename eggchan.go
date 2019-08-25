@@ -9,32 +9,30 @@ import (
 type BoardService interface {
 	ShowBoardReply(board string) (BoardReply, error)
 	ShowThreadReply(board string, id int) (ThreadReply, error)
-
 	ListCategories() ([]Category, error)
 	ShowCategory(name string) ([]Board, error)
 	ListBoards() ([]Board, error)
-	ShowBoard(board string) ([]Thread, error)
-	ShowThread(board string, id int) ([]Post, error)
 	MakeThread(board, comment, author, subject string) (int, error)
 	MakeComment(board string, thread int, comment string, author string) (int, error)
-	ShowBoardDesc(board string) (Board, error)
-	ShowThreadOP(board string, id int) (Thread, error)
+}
 
+type AdminService interface {
 	AddBoard(board, description, category string) error
 	AddCategory(category string) error
 	DeleteThread(board string, thread int) (int64, error)
 	DeleteComment(board string, thread int) (int64, error)
 }
 
+// type UserService interface {
+// 	ListUsers() ([]User, error)
+// 	AddUser(user, password string) error
+// 	DeleteUser(user string) error
+// 	GrantPermissions(user string, perms []Permission) error
+// 	RevokePermissions(user string, perms []Permission) error
+// }
+
 type AuthService interface {
-	AddUser(user, password string) error
-	DeleteUser(user string) error
-	ListUsers() ([]User, error)
-	ValidatePassword(user string, password []byte) (bool, error)
-	CheckPermission(user, permission string) (bool, error)
-	GrantPermissions(user string, perms []Permission) error
-	RevokePermissions(user string, perms []Permission) error
-	ListPermissions() ([]Permission, error)
+	CheckAuth(user string, password []byte, permission string) (bool, error)
 }
 
 type Category struct {

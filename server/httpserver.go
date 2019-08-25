@@ -13,6 +13,7 @@ import (
 type HttpServer struct {
 	Router       *mux.Router
 	BoardService eggchan.BoardService
+	AdminService eggchan.AdminService
 	AuthService  eggchan.AuthService
 	routes       Routes
 }
