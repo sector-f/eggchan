@@ -16,7 +16,7 @@ import (
 func isPretty(r *http.Request) bool {
 	prettyVals := r.URL.Query()["pretty"]
 	for _, value := range prettyVals {
-		if value == "true" || value == "yes" {
+		if value == "true" || value == "yes" || value == "please" {
 			return true
 		}
 	}
