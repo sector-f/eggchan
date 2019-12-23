@@ -15,6 +15,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "eggchan"
 	app.Version = "0.1.0"
+	app.Usage = "A headless JSON textboard"
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
