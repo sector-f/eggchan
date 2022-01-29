@@ -1,8 +1,6 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"os"
 
@@ -41,17 +39,16 @@ func main() {
 	}
 
 	app.Action = func(ctx *cli.Context) error {
-		connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", ctx.String("database"))
-		db, err := sql.Open("postgres", connectionString)
+		pgOptions := postgres.Options{Hostname: "127.0.0.1", Database: ctx.String("database")}
+		service, err := postgres.New(pgOptions)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
-		service := postgres.EggchanService{db}
 		httpServer := server.HttpServer{
-			BoardService: &service,
-			AdminService: &service,
-			AuthService:  &service,
+			BoardService: service,
+			AdminService: service,
+			AuthService:  service,
 		}
 		httpServer.Initialize()
 		httpServer.Run(ctx.String("bind"))

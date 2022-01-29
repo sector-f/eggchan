@@ -9,7 +9,7 @@ import (
 )
 
 func (s *EggchanService) DeleteThread(board string, thread int) (int64, error) {
-	result, err := s.DB.Exec(
+	result, err := s.db.Exec(
 		`DELETE FROM threads
 		WHERE board_id = (SELECT id FROM boards WHERE name = $1)
 		AND post_num = $2`,
@@ -26,7 +26,7 @@ func (s *EggchanService) DeleteThread(board string, thread int) (int64, error) {
 }
 
 func (s *EggchanService) DeleteComment(board string, comment int) (int64, error) {
-	result, err := s.DB.Exec(
+	result, err := s.db.Exec(
 		`DELETE FROM comments
 		USING threads
 		WHERE threads.board_id = (SELECT id FROM boards WHERE name = $1)
@@ -44,7 +44,7 @@ func (s *EggchanService) DeleteComment(board string, comment int) (int64, error)
 }
 
 func (s *EggchanService) AddUser(user, password string) error {
-	_, err := s.DB.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO users (username, password) VALUES ($1, $2)`,
 		user,
 		password,
@@ -58,7 +58,7 @@ func (s *EggchanService) AddUser(user, password string) error {
 }
 
 func (s *EggchanService) DeleteUser(user string) error {
-	result, err := s.DB.Exec(
+	result, err := s.db.Exec(
 		`DELETE FROM users WHERE username = $1`,
 		user,
 	)
@@ -76,7 +76,7 @@ func (s *EggchanService) DeleteUser(user string) error {
 }
 
 func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
-	tx, err := s.DB.Begin()
+	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, eggchan.DatabaseError{}
 	}
@@ -128,7 +128,7 @@ func (s *EggchanService) ListUsers() ([]eggchan.User, error) {
 
 func (s *EggchanService) GrantPermissions(user string, perms []eggchan.Permission) error {
 	for _, perm := range perms {
-		_, err := s.DB.Exec(
+		_, err := s.db.Exec(
 			`INSERT INTO user_permissions (user_id, permission) VALUES
 			((SELECT id FROM users WHERE username = $1), (SELECT id FROM permissions WHERE name = $2))`,
 			user,
@@ -145,7 +145,7 @@ func (s *EggchanService) GrantPermissions(user string, perms []eggchan.Permissio
 
 func (s *EggchanService) RevokePermissions(user string, perms []eggchan.Permission) error {
 	for _, perm := range perms {
-		_, err := s.DB.Exec(
+		_, err := s.db.Exec(
 			`DELETE FROM user_permissions
 			WHERE user_id = (SELECT id FROM users WHERE username = $1)
 			AND permission = (SELECT id FROM permissions WHERE name = $2)`,
@@ -164,7 +164,7 @@ func (s *EggchanService) RevokePermissions(user string, perms []eggchan.Permissi
 
 func (s *EggchanService) ListPermissions() ([]eggchan.Permission, error) {
 	perms := []eggchan.Permission{}
-	rows, err := s.DB.Query(`SELECT name FROM permissions ORDER BY id ASC`)
+	rows, err := s.db.Query(`SELECT name FROM permissions ORDER BY id ASC`)
 	if err != nil {
 		return perms, eggchan.DatabaseError{}
 	}
@@ -195,7 +195,7 @@ func (s *EggchanService) CheckAuth(user string, password []byte, permission stri
 }
 
 func (s *EggchanService) ValidatePassword(user string, password []byte) (bool, error) {
-	pw_row := s.DB.QueryRow(`SELECT password FROM users WHERE username = $1`, user)
+	pw_row := s.db.QueryRow(`SELECT password FROM users WHERE username = $1`, user)
 	var db_pw []byte
 
 	err := pw_row.Scan(&db_pw)
@@ -216,7 +216,7 @@ func (s *EggchanService) ValidatePassword(user string, password []byte) (bool, e
 }
 
 func (s *EggchanService) CheckPermission(user, permission string) (bool, error) {
-	row := s.DB.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT COUNT(*) from user_permissions
 		WHERE user_id = (SELECT id FROM users WHERE username = $1 LIMIT 1)
 		AND permission = (SELECT id FROM permissions WHERE name = $2 LIMIT 1)`,

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"database/sql"
 	"fmt"
 	"io"
 	"os"
@@ -14,13 +13,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO: Figure out why the heck I decided to make this global
+// And then maybe make it not-global
 var Service postgres.EggchanService
 
 // Cobra global variables
-var Database string
-var Username string
-var Password string
-var Egg bool
+var (
+	Database string
+	Username string
+	Password string
+	Egg      bool
+)
 
 // Readline tab completion
 var completer = readline.NewPrefixCompleter(
@@ -50,24 +53,16 @@ func init() {
 var rootCmd = &cobra.Command{
 	Use:   "eggshell",
 	Short: "Command-line interface to the Eggchan database",
-	PreRun: func(cmd *cobra.Command, args []string) {
-		connectionString := fmt.Sprintf("host=127.0.0.1 dbname=%s sslmode=disable", cmd.Flag("database").Value.String())
-		var err error
-		db, err := sql.Open("postgres", connectionString)
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		pgOptions := postgres.Options{Hostname: "127.0.0.1", Database: cmd.Flag("database").Value.String()}
+		service, err := postgres.New(pgOptions)
 		if err != nil {
-			fmt.Printf("Error establishing database connection: %s\n", err)
-			return
+			return err
 		}
 
-		err = db.Ping()
-		if err != nil {
-			fmt.Printf("Error establishing database connection: %s\n", err)
-			return
-		}
+		Service = *service
 
-		Service = postgres.EggchanService{db}
-
-		return
+		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var prompt string
