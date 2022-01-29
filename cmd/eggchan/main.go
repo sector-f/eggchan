@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/sector-f/eggchan/postgres"
+	"github.com/sector-f/eggchan/database/postgres"
 	"github.com/sector-f/eggchan/server"
 	"github.com/urfave/cli"
 )

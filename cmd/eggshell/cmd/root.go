@@ -10,7 +10,7 @@ import (
 	"github.com/chzyer/readline"
 	shellquote "github.com/kballard/go-shellquote"
 	_ "github.com/lib/pq"
-	"github.com/sector-f/eggchan/postgres"
+	"github.com/sector-f/eggchan/database/postgres"
 	"github.com/spf13/cobra"
 )
 
